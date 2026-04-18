@@ -1,0 +1,40 @@
+# Build directories
+/build/
+/out/
+/cmake-build-*/
+
+# Local datasets (large, generated/collected externally)
+/DCKP-instances/
+
+# CMake generated files
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/compile_commands.json
+/CTestTestfile.cmake
+/Testing/
+/install_manifest.txt
+/*.ninja
+/.ninja_deps
+/.ninja_log
+
+# Binary/object artifacts
+*.obj
+*.o
+*.lo
+*.slo
+*.so
+*.dylib
+*.dll
+*.lib
+*.a
+*.exe
+*.out
+*.pdb
+
+# IDE/user files
+/.vs/
+/.vscode/
+/.github/
+*.user
+*.suo
