@@ -35,17 +35,9 @@ bool Solution::removeItem(ItemId item) noexcept
     {
         return false;
     }
-    if (instance_->is_valid_item(item))
-    {
-        const std::size_t idx = static_cast<std::size_t>(item);
-        total_profit_ -= static_cast<TotalProfit>(instance_->profits()[idx]);
-        total_weight_ -= static_cast<TotalWeight>(instance_->weights()[idx]);
-    }
-    else
-    {
-        // Defensive: if an invalid id was somehow present, recompute from scratch.
-        recomputeTotals();
-    }
+    const std::size_t idx = static_cast<std::size_t>(item);
+    total_profit_ -= static_cast<TotalProfit>(instance_->profits()[idx]);
+    total_weight_ -= static_cast<TotalWeight>(instance_->weights()[idx]);
     return true;
 }
 
@@ -145,10 +137,10 @@ std::string Solution::toString() const
 {
     std::ostringstream ss;
     ss << '[' << method_name_ << "] "
-       << "Lucro=" << total_profit_
-       << ", Peso=" << total_weight_
-       << ", Itens=" << selected_items_.size()
-       << ", " << (is_feasible_ ? "Viavel" : "Inviavel")
+       << "Profit=" << total_profit_
+       << ", Weight=" << total_weight_
+       << ", Items=" << selected_items_.size()
+       << ", " << (is_feasible_ ? "Feasible" : "Infeasible")
        << ", " << std::fixed << std::setprecision(4) << computation_time_ << 's';
     return ss.str();
 }
@@ -181,16 +173,12 @@ bool operator==(const Solution &a, const Solution &b) noexcept
 
 std::strong_ordering operator<=>(const Solution &a, const Solution &b) noexcept
 {
-    // Deterministic, structural total ordering. Not profit-only.
-    // Because totals are derived from selected_items_, same items implies
-    // same totals, so this ordering is consistent with operator==.
     if (auto cmp = a.total_profit_ <=> b.total_profit_; cmp != 0)
     {
         return cmp;
     }
     if (auto cmp = b.total_weight_ <=> a.total_weight_; cmp != 0)
     {
-        // Lighter solutions order higher among equal-profit ties.
         return cmp;
     }
     if (a.selected_items_ < b.selected_items_)

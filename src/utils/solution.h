@@ -79,7 +79,6 @@ public:
     [[nodiscard]] std::string_view methodName() const noexcept;
     [[nodiscard]] const DCKPInstance &instance() const noexcept;
 
-    // Metadata setters: controlled access for algorithms/validator.
     void setFeasible(bool feasible) noexcept;
     void setComputationTime(Seconds seconds) noexcept;
     void setMethodName(std::string name);
@@ -88,10 +87,6 @@ public:
     void print() const;
     [[nodiscard]] bool saveToFile(const std::filesystem::path &path) const;
 
-    // Structural comparison: deterministic, consistent with operator==.
-    // Equality requires the same set of selected items (and therefore the
-    // same totals because totals are derived). Ordering breaks ties by
-    // total_profit, then by total_weight, then by the sorted item set.
     friend bool operator==(const Solution &a, const Solution &b) noexcept;
     friend std::strong_ordering operator<=>(const Solution &a, const Solution &b) noexcept;
 

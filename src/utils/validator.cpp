@@ -38,8 +38,6 @@ ValidationReport Validator::analyze(std::span<const ItemId> items) const
     std::vector<ItemId> valid_items;
     valid_items.reserve(items.size());
 
-    // Pass 1: validate ranges, accumulate totals for valid indices only, and
-    // record explicit failure reasons for anything out of range.
     for (const ItemId item : items)
     {
         if (!instance_.is_valid_item(item))
@@ -47,7 +45,7 @@ ValidationReport Validator::analyze(std::span<const ItemId> items) const
             ++report.invalid_index_count;
             report.feasible = false;
             std::ostringstream msg;
-            msg << "Item " << item << " fora do intervalo [0, "
+            msg << "Item " << item << " is out of range [0, "
                 << instance_.n_items() << ").";
             report.failures.push_back(msg.str());
             continue;
@@ -58,18 +56,16 @@ ValidationReport Validator::analyze(std::span<const ItemId> items) const
         valid_items.push_back(item);
     }
 
-    // Pass 2: capacity.
     if (report.total_weight > instance_.capacity())
     {
         report.feasible = false;
         report.capacity_violated = true;
         std::ostringstream msg;
-        msg << "Capacidade excedida: peso total " << report.total_weight
-            << " > capacidade " << instance_.capacity() << '.';
+        msg << "Capacity exceeded: total weight " << report.total_weight
+            << " > capacity " << instance_.capacity() << '.';
         report.failures.push_back(msg.str());
     }
 
-    // Pass 3: conflicts. Using the deduplicated sorted valid_items list.
     std::sort(valid_items.begin(), valid_items.end());
     valid_items.erase(std::unique(valid_items.begin(), valid_items.end()), valid_items.end());
 
@@ -82,8 +78,8 @@ ValidationReport Validator::analyze(std::span<const ItemId> items) const
                 ++report.conflict_pair_count;
                 report.feasible = false;
                 std::ostringstream msg;
-                msg << "Conflito entre itens " << valid_items[i]
-                    << " e " << valid_items[j] << '.';
+                msg << "Conflict between items " << valid_items[i]
+                    << " and " << valid_items[j] << '.';
                 report.failures.push_back(msg.str());
             }
         }
@@ -115,17 +111,17 @@ std::string Validator::validateDetailed(const Solution &solution) const
     const ValidationReport report = analyze(solution);
 
     std::ostringstream ss;
-    ss << "Itens: " << solution.selectedItems().size()
-       << ", Peso: " << report.total_weight << '/' << report.capacity
-       << ", Lucro: " << report.total_profit
-       << " | Indices invalidos: " << report.invalid_index_count
-       << " | Capacidade: " << (report.capacity_violated ? "VIOLADA" : "OK")
-       << " | Conflitos: " << report.conflict_pair_count
-       << " | " << (report.feasible ? "VIAVEL" : "INVIAVEL");
+    ss << "Items: " << solution.selectedItems().size()
+       << ", Weight: " << report.total_weight << '/' << report.capacity
+       << ", Profit: " << report.total_profit
+       << " | Invalid indices: " << report.invalid_index_count
+       << " | Capacity: " << (report.capacity_violated ? "VIOLATED" : "OK")
+       << " | Conflicts: " << report.conflict_pair_count
+       << " | " << (report.feasible ? "FEASIBLE" : "INFEASIBLE");
 
     if (!report.failures.empty())
     {
-        ss << "\nMotivos:";
+        ss << "\nReasons:";
         for (const std::string &reason : report.failures)
         {
             ss << "\n  - " << reason;

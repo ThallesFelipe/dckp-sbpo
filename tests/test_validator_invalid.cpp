@@ -28,7 +28,8 @@ namespace
     bool containsSubstr(const std::vector<std::string> &messages, std::string_view needle)
     {
         return std::any_of(messages.begin(), messages.end(),
-                           [&](const std::string &m) { return m.find(needle) != std::string::npos; });
+                           [&](const std::string &m)
+                           { return m.find(needle) != std::string::npos; });
     }
 }
 
@@ -71,7 +72,7 @@ int main()
         // Sum of weights = 2+3+1+4+1 = 11 > capacity 10.
         DCKP_CHECK(!report.feasible);
         DCKP_CHECK(report.capacity_violated);
-        DCKP_CHECK(containsSubstr(report.failures, "Capacidade"));
+        DCKP_CHECK(containsSubstr(report.failures, "Capacity"));
     }
 
     // Case 4: Conflict detected and reported explicitly. Instance conflicts
@@ -82,7 +83,7 @@ int main()
         const ValidationReport report = validator.analyze(std::span<const DCKPInstance::ItemId>{items.data(), items.size()});
         DCKP_CHECK(!report.feasible);
         DCKP_CHECK_EQ(report.conflict_pair_count, 1U);
-        DCKP_CHECK(containsSubstr(report.failures, "Conflito"));
+        DCKP_CHECK(containsSubstr(report.failures, "Conflict"));
     }
 
     // Case 5: Feasible solution reports clean.

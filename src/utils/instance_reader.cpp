@@ -39,13 +39,11 @@ namespace
         return text.substr(begin, end - begin + 1U);
     }
 
-    // Collapses any run of spaces/tabs into a single space and trims ends.
-    // Used only for tolerant pattern matching (not for numeric parsing).
     std::string normalize_whitespace(std::string_view text)
     {
         std::string out;
         out.reserve(text.size());
-        bool in_space = true; // skip leading whitespace
+        bool in_space = true;
         for (const char ch : text)
         {
             if (ch == ' ' || ch == '\t')
@@ -103,7 +101,6 @@ namespace
         return true;
     }
 
-    // Tolerant "param <name> := <value>;" parser. Accepts any whitespace between tokens.
     bool parse_param_line(std::string_view line, std::string_view name, std::int64_t &out_value)
     {
         const std::string normalized = normalize_whitespace(line);
@@ -112,7 +109,7 @@ namespace
         {
             return false;
         }
-        // Require a boundary after the name (space or colon-equal).
+
         const std::size_t after_name = prefix.size();
         if (after_name < normalized.size() && normalized[after_name] != ' ')
         {
@@ -135,8 +132,6 @@ namespace
         return try_parse_i64(value_text, out_value);
     }
 
-    // Recognizes AMPL-like format by scanning the first few non-blank lines for
-    // AMPL markers. Tolerant to spacing and trailing comments.
     InputFormat detect_format(std::string_view content) noexcept
     {
         std::size_t pos = 0;
@@ -147,7 +142,6 @@ namespace
             std::string_view line = content.substr(
                 pos, eol == std::string_view::npos ? content.size() - pos : eol - pos);
 
-            // Strip comments and trim.
             const std::size_t hash = line.find('#');
             if (hash != std::string_view::npos)
             {
@@ -176,8 +170,6 @@ namespace
         return InputFormat::NumericCompact;
     }
 
-    // Token-based match for "param : V : p w :=" with any whitespace between tokens.
-    // Returns the byte offset past the ":=" marker on success, or npos on failure.
     std::size_t match_values_header(std::string_view line) noexcept
     {
         const std::string normalized = normalize_whitespace(line);
@@ -199,7 +191,7 @@ namespace
         }
         return std::string::npos;
     }
-} // namespace
+}
 
 void DCKPInstance::set_error(std::string message)
 {
@@ -235,7 +227,7 @@ bool DCKPInstance::read_from_file(const std::filesystem::path &file_path)
     std::ifstream input(file_path, std::ios::binary);
     if (!input)
     {
-        set_error("Nao foi possivel abrir o arquivo: " + file_path.string());
+        set_error("Could not open file: " + file_path.string());
         return false;
     }
 
@@ -244,18 +236,17 @@ bool DCKPInstance::read_from_file(const std::filesystem::path &file_path)
 
     if (!input.good() && !input.eof())
     {
-        set_error("Falha ao ler o arquivo: " + file_path.string());
+        set_error("Failed to read file: " + file_path.string());
         return false;
     }
 
     std::string content = buffer.str();
     if (content.empty())
     {
-        set_error("Arquivo vazio: " + file_path.string());
+        set_error("Empty file: " + file_path.string());
         return false;
     }
 
-    // Strip UTF-8 BOM.
     if (content.size() >= 3U &&
         static_cast<unsigned char>(content[0]) == 0xEFU &&
         static_cast<unsigned char>(content[1]) == 0xBBU &&
@@ -290,20 +281,20 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
 
     if (!in.eof())
     {
-        set_error("Formato numerico compacto invalido: token nao numerico encontrado.");
+        set_error("Invalid numeric compact format: non-numeric token found.");
         return false;
     }
 
     if (tokens.size() < 3U)
     {
-        set_error("Cabecalho invalido no formato numerico compacto.");
+        set_error("Invalid header in numeric compact format.");
         return false;
     }
 
     const std::int64_t parsed_n_items_i64 = tokens[0];
     if (parsed_n_items_i64 <= 0 || parsed_n_items_i64 > std::numeric_limits<ItemId>::max())
     {
-        set_error("Numero de itens deve ser positivo e caber em int32.");
+        set_error("Number of items must be positive and fit in int32.");
         return false;
     }
 
@@ -316,7 +307,7 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
 
     if (tokens.size() < conflicts_start)
     {
-        set_error("Arquivo numerico compacto incompleto: faltam profits/weights.");
+        set_error("Incomplete numeric compact file: missing profits/weights.");
         return false;
     }
 
@@ -357,18 +348,18 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
     }
     else
     {
-        set_error("Cabecalho inconsistente: nao foi possivel inferir a quantidade de conflitos pelo tamanho do arquivo.");
+        set_error("Inconsistent header: could not infer the number of conflicts from file size.");
         return false;
     }
 
     if (parsed_capacity < 0)
     {
-        set_error("Capacidade nao pode ser negativa.");
+        set_error("Capacity cannot be negative.");
         return false;
     }
     if (declared_conflicts < 0)
     {
-        set_error("Numero de conflitos nao pode ser negativo.");
+        set_error("Number of conflicts cannot be negative.");
         return false;
     }
 
@@ -384,12 +375,12 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
 
         if (profit < std::numeric_limits<Value>::min() || profit > std::numeric_limits<Value>::max())
         {
-            set_error("Profit fora do intervalo suportado para int32.");
+            set_error("Profit is out of the supported int32 range.");
             return false;
         }
         if (weight < 0 || weight > std::numeric_limits<Value>::max())
         {
-            set_error("Weight invalido (negativo ou fora do intervalo int32).");
+            set_error("Invalid weight (negative or out of int32 range).");
             return false;
         }
         profits_[index] = static_cast<Value>(profit);
@@ -407,7 +398,7 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
         if (u < std::numeric_limits<ItemId>::min() || u > std::numeric_limits<ItemId>::max() ||
             v < std::numeric_limits<ItemId>::min() || v > std::numeric_limits<ItemId>::max())
         {
-            set_error("Indice de aresta fora do intervalo int32.");
+            set_error("Edge index is out of int32 range.");
             return false;
         }
         raw_conflicts.emplace_back(static_cast<ItemId>(u), static_cast<ItemId>(v));
@@ -476,33 +467,33 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
             !try_read_i32(line_stream, profit) ||
             !try_read_i32(line_stream, weight))
         {
-            set_error("Linha " + std::to_string(line_number) +
-                      ": registro invalido no bloco de valores (esperado: item profit weight).");
+            set_error("Line " + std::to_string(line_number) +
+                      ": invalid record in values block (expected: item profit weight).");
             return false;
         }
 
         std::string extra_token;
         if (line_stream >> extra_token)
         {
-            set_error("Linha " + std::to_string(line_number) + ": tokens extras no bloco de valores.");
+            set_error("Line " + std::to_string(line_number) + ": extra tokens in values block.");
             return false;
         }
         if (!is_valid_item(item))
         {
-            set_error("Linha " + std::to_string(line_number) +
-                      ": indice de item fora do intervalo no bloco de valores.");
+            set_error("Line " + std::to_string(line_number) +
+                      ": item index out of range in values block.");
             return false;
         }
         if (weight < 0)
         {
-            set_error("Linha " + std::to_string(line_number) + ": peso negativo no bloco de valores.");
+            set_error("Line " + std::to_string(line_number) + ": negative weight in values block.");
             return false;
         }
 
         const std::size_t item_index = static_cast<std::size_t>(item);
         if (seen_items[item_index])
         {
-            set_error("Linha " + std::to_string(line_number) + ": item duplicado no bloco de valores.");
+            set_error("Line " + std::to_string(line_number) + ": duplicate item in values block.");
             return false;
         }
         seen_items[item_index] = true;
@@ -542,15 +533,15 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
         ItemId v = 0;
         if (!try_read_i32(line_stream, u) || !try_read_i32(line_stream, v))
         {
-            set_error("Linha " + std::to_string(line_number) +
-                      ": registro invalido no bloco de arestas (esperado: u v).");
+            set_error("Line " + std::to_string(line_number) +
+                      ": invalid record in edges block (expected: u v).");
             return false;
         }
 
         std::string extra_token;
         if (line_stream >> extra_token)
         {
-            set_error("Linha " + std::to_string(line_number) + ": tokens extras no bloco de arestas.");
+            set_error("Line " + std::to_string(line_number) + ": extra tokens in edges block.");
             return false;
         }
         raw_conflicts.emplace_back(u, v);
@@ -590,22 +581,21 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
                 continue;
             }
 
-            const std::size_t header_len = match_values_header(view);
-            if (header_len != std::string::npos)
+            if (match_values_header(view) != std::string::npos)
             {
                 if (!parsed_n_items.has_value() || !parsed_capacity.has_value())
                 {
-                    set_error("Cabecalho AMPL incompleto: parametros n e c devem aparecer antes do bloco de valores.");
+                    set_error("Incomplete AMPL header: parameters n and c must appear before the values block.");
                     return false;
                 }
                 if (*parsed_n_items <= 0 || *parsed_n_items > std::numeric_limits<ItemId>::max())
                 {
-                    set_error("Parametro n invalido (deve ser positivo e caber em int32).");
+                    set_error("Invalid n parameter (must be positive and fit in int32).");
                     return false;
                 }
                 if (*parsed_capacity < 0)
                 {
-                    set_error("Parametro c nao pode ser negativo no formato AMPL.");
+                    set_error("Parameter c cannot be negative in AMPL format.");
                     return false;
                 }
 
@@ -619,8 +609,6 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
 
                 state = State::Values;
 
-                // Consume the remainder of the same line (normalized form offset won't match raw;
-                // re-normalize remainder by finding ":=" in the original view).
                 const std::size_t raw_assign = view.find(":=");
                 if (raw_assign != std::string_view::npos)
                 {
@@ -638,7 +626,6 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
                         }
                     }
                 }
-                (void)header_len;
                 continue;
             }
             continue;
@@ -660,8 +647,7 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
 
         if (state == State::WaitingEdges)
         {
-            const std::size_t header_len = match_edges_header(view);
-            if (header_len != std::string::npos)
+            if (match_edges_header(view) != std::string::npos)
             {
                 state = State::Edges;
                 const std::size_t raw_assign = view.find(":=");
@@ -703,22 +689,22 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
 
     if (state == State::Header)
     {
-        set_error("Formato AMPL invalido: bloco de valores nao encontrado.");
+        set_error("Invalid AMPL format: values block not found.");
         return false;
     }
     if (state == State::Values)
     {
-        set_error("Formato AMPL invalido: bloco de valores sem terminador ';'.");
+        set_error("Invalid AMPL format: values block missing ';' terminator.");
         return false;
     }
     if (state == State::WaitingEdges)
     {
-        set_error("Formato AMPL invalido: bloco de arestas 'set E :=' nao encontrado.");
+        set_error("Invalid AMPL format: edges block 'set E :=' not found.");
         return false;
     }
     if (state == State::Edges)
     {
-        set_error("Formato AMPL invalido: bloco de arestas sem terminador ';'.");
+        set_error("Invalid AMPL format: edges block missing ';' terminator.");
         return false;
     }
 
@@ -728,7 +714,7 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
 
     if (loaded_items != expected_items)
     {
-        set_error("Bloco de valores incompleto: nem todos os itens de 0..n-1 foram informados.");
+        set_error("Incomplete values block: not all items from 0..n-1 were provided.");
         return false;
     }
 
@@ -767,7 +753,7 @@ bool DCKPInstance::normalize_conflicts(const std::vector<Conflict> &raw_conflict
 
     if (!valid_zero_based && !valid_one_based)
     {
-        set_error("Arestas de conflito com indices fora do intervalo permitido.");
+        set_error("Conflict edges have indices outside the allowed range.");
         return false;
     }
 
@@ -782,7 +768,6 @@ bool DCKPInstance::normalize_conflicts(const std::vector<Conflict> &raw_conflict
     }
     else
     {
-        // Both ranges accept the set; disambiguate by which boundary value appears.
         if (saw_zero && !saw_n)
         {
             base = 0;
@@ -803,7 +788,7 @@ bool DCKPInstance::normalize_conflicts(const std::vector<Conflict> &raw_conflict
 
         if (!is_valid_item(u) || !is_valid_item(v))
         {
-            set_error("Aresta de conflito invalida apos normalizacao de indice.");
+            set_error("Invalid conflict edge after index normalization.");
             return false;
         }
         if (u == v)
