@@ -3,60 +3,74 @@
 #include "instance_reader.h"
 #include "solution.h"
 
+#include <cstdint>
 #include <set>
+#include <span>
 #include <string>
+#include <vector>
+
+/**
+ * @brief Structured outcome of a validation attempt.
+ *
+ * `feasible` is the single aggregate verdict. `failures` carries a
+ * human-readable list of every reason feasibility was lost (out-of-range
+ * indices, capacity violations, conflict pairs). The list is empty when
+ * the solution is feasible.
+ */
+struct ValidationReport
+{
+    bool feasible{true};
+    std::int64_t total_profit{0};
+    std::int64_t total_weight{0};
+    std::int64_t capacity{0};
+    std::size_t invalid_index_count{0};
+    std::size_t conflict_pair_count{0};
+    bool capacity_violated{false};
+    std::vector<std::string> failures{};
+};
 
 /**
  * @brief Validates solutions for the DCKP problem.
  *
- * Checks:
- * 1. Capacity constraint: total weight <= capacity
- * 2. Conflict constraints: no pair of conflicting items selected
+ * The validator treats any item index outside [0, n-1] as a hard failure
+ * with an explicit reason — it never silently ignores invalid indices.
  */
 class Validator
 {
 public:
-    /**
-     * @brief Constructs a validator bound to a problem instance.
-     * @param inst Reference to the DCKP instance (must outlive this object)
-     */
+    using ItemId = DCKPInstance::ItemId;
+
     explicit Validator(const DCKPInstance &inst) noexcept;
 
     /**
-     * @brief Validates a complete solution, updating its feasibility and metrics.
-     * @param solution Solution to validate (modified: recalculates metrics and sets is_feasible)
-     * @return true if the solution is feasible, false otherwise
+     * @brief Validates @p solution and updates its feasibility flag.
+     * @return true when feasible.
      */
     bool validate(Solution &solution) const;
 
     /**
-     * @brief Checks whether adding an item would violate the capacity constraint.
-     * @param current_weight Current total weight of the solution
-     * @param item_weight Weight of the item to be added
-     * @return true if it does NOT violate capacity, false otherwise
+     * @brief Builds a full ValidationReport for @p solution.
      */
-    [[nodiscard]] bool checkCapacity(int current_weight, int item_weight) const noexcept;
+    [[nodiscard]] ValidationReport analyze(const Solution &solution) const;
 
     /**
-     * @brief Checks whether an item conflicts with any already-selected item.
-     * @param item Index of the item to check (0-based)
-     * @param selected_items Set of currently selected items
-     * @return true if there are NO conflicts, false otherwise
+     * @brief Builds a full ValidationReport for a raw set of items. Useful
+     * for tests and for validating solutions loaded from external sources.
      */
-    [[nodiscard]] bool checkConflicts(int item, const std::set<int> &selected_items) const noexcept;
+    [[nodiscard]] ValidationReport analyze(std::span<const ItemId> items) const;
+    [[nodiscard]] ValidationReport analyze(const std::set<ItemId> &items) const;
 
     /**
-     * @brief Validates and returns a detailed human-readable report.
-     * @param solution Solution to validate (read-only)
-     * @return String with validation details
+     * @brief Human-readable, multi-line detailed report (includes every
+     * failure reason).
      */
     [[nodiscard]] std::string validateDetailed(const Solution &solution) const;
 
     /**
-     * @brief Recalculates total profit and total weight from selected items.
-     * @param solution Solution whose metrics will be recalculated (modified)
+     * @brief Incremental feasibility helpers for construction algorithms.
      */
-    void recalculateMetrics(Solution &solution) const noexcept;
+    [[nodiscard]] bool checkCapacity(std::int64_t current_weight, std::int64_t item_weight) const noexcept;
+    [[nodiscard]] bool checkConflicts(ItemId item, const std::set<ItemId> &selected_items) const noexcept;
 
 private:
     const DCKPInstance &instance_;

@@ -1,103 +1,106 @@
 #pragma once
 
+#include "instance_reader.h"
+
+#include <compare>
+#include <cstdint>
+#include <filesystem>
 #include <set>
 #include <string>
+#include <string_view>
 
 /**
- * @brief Represents a candidate solution for the DCKP problem.
+ * @brief Candidate solution for the DCKP problem.
  *
- * Stores the selected items, total profit, total weight,
- * feasibility status, computation time, and method name.
+ * A Solution is bound to a DCKPInstance at construction and maintains the
+ * invariant that total_profit and total_weight always equal the sum of the
+ * corresponding fields of its currently selected items. Callers cannot
+ * mutate totals directly; they are recomputed on every item mutation.
  *
- * Uses std::set for ordered iteration and O(log n) lookups.
+ * Accumulators use 64-bit signed integers to avoid overflow even on large
+ * instances where the sum of int32 profits/weights would not fit in int32.
  */
 class Solution
 {
 public:
-    std::set<int> selected_items;
-    int total_profit;
-    int total_weight;
-    bool is_feasible;
-    double computation_time;
-    std::string method_name;
+    using ItemId = DCKPInstance::ItemId;
+    using TotalProfit = std::int64_t;
+    using TotalWeight = std::int64_t;
+    using Seconds = double;
 
     /**
-     * @brief Default constructor.
-     * @post Empty solution with profit=0, weight=0, is_feasible=true.
+     * @brief Constructs an empty solution bound to @p instance.
+     * The referenced instance must outlive this object.
      */
-    Solution() noexcept;
+    explicit Solution(const DCKPInstance &instance) noexcept;
+
+    Solution(const Solution &) = default;
+    Solution(Solution &&) noexcept = default;
+    Solution &operator=(const Solution &) = default;
+    Solution &operator=(Solution &&) noexcept = default;
+    ~Solution() = default;
 
     /**
-     * @brief Adds an item to the solution.
-     * @param item Item index (0-based)
-     * @param profit Item profit
-     * @param weight Item weight
-     * @note If the item already exists, the operation is ignored.
+     * @brief Inserts @p item if it is a valid index for the bound instance
+     * and not already present. Totals are updated from instance data.
+     * @return true if the solution changed, false otherwise (invalid item
+     * id, or item already present).
      */
-    void addItem(int item, int profit, int weight);
+    bool addItem(ItemId item) noexcept;
 
     /**
-     * @brief Removes an item from the solution.
-     * @param item Item index (0-based)
-     * @param profit Item profit
-     * @param weight Item weight
-     * @note If the item does not exist, the operation is ignored.
+     * @brief Removes @p item if present. Totals are updated.
+     * @return true if the solution changed, false otherwise.
      */
-    void removeItem(int item, int profit, int weight);
+    bool removeItem(ItemId item) noexcept;
 
-    /**
-     * @brief Checks whether an item is in the solution.
-     * @param item Item index (0-based)
-     * @return true if the item is selected, false otherwise
-     */
-    [[nodiscard]] bool hasItem(int item) const noexcept;
-
-    /**
-     * @brief Returns the number of selected items.
-     */
-    [[nodiscard]] int size() const noexcept;
-
-    /**
-     * @brief Checks whether the solution is empty.
-     * @return true if no items are selected
-     */
+    [[nodiscard]] bool hasItem(ItemId item) const noexcept;
+    [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] bool empty() const noexcept;
 
     /**
-     * @brief Clears the solution to its default state.
-     * @post selected_items empty, total_profit=0, total_weight=0.
+     * @brief Clears selected items and resets derived totals. Does not
+     * alter feasibility, timing, or method name metadata.
      */
     void clear() noexcept;
 
     /**
-     * @brief Converts the solution to a human-readable string.
+     * @brief Recomputes total_profit and total_weight from the current
+     * items and the bound instance. Called automatically by addItem and
+     * removeItem, and exposed for defensive use after bulk operations.
      */
+    void recomputeTotals() noexcept;
+
+    [[nodiscard]] const std::set<ItemId> &selectedItems() const noexcept;
+    [[nodiscard]] TotalProfit totalProfit() const noexcept;
+    [[nodiscard]] TotalWeight totalWeight() const noexcept;
+    [[nodiscard]] bool isFeasible() const noexcept;
+    [[nodiscard]] Seconds computationTime() const noexcept;
+    [[nodiscard]] std::string_view methodName() const noexcept;
+    [[nodiscard]] const DCKPInstance &instance() const noexcept;
+
+    // Metadata setters: controlled access for algorithms/validator.
+    void setFeasible(bool feasible) noexcept;
+    void setComputationTime(Seconds seconds) noexcept;
+    void setMethodName(std::string name);
+
     [[nodiscard]] std::string toString() const;
-
-    /**
-     * @brief Prints solution information to stdout.
-     */
     void print() const;
+    [[nodiscard]] bool saveToFile(const std::filesystem::path &path) const;
 
-    /**
-     * @brief Saves the solution to a file.
-     * @param filename Output file path
-     * @return true on success, false on failure
-     */
-    [[nodiscard]] bool saveToFile(const std::string &filename) const;
+    // Structural comparison: deterministic, consistent with operator==.
+    // Equality requires the same set of selected items (and therefore the
+    // same totals because totals are derived). Ordering breaks ties by
+    // total_profit, then by total_weight, then by the sorted item set.
+    friend bool operator==(const Solution &a, const Solution &b) noexcept;
+    friend std::strong_ordering operator<=>(const Solution &a, const Solution &b) noexcept;
 
-    /**
-     * @brief Compares by profit (greater).
-     */
-    [[nodiscard]] bool operator>(const Solution &other) const noexcept;
-
-    /**
-     * @brief Compares by profit (less).
-     */
-    [[nodiscard]] bool operator<(const Solution &other) const noexcept;
-
-    /**
-     * @brief Equality based on profit.
-     */
-    [[nodiscard]] bool operator==(const Solution &other) const noexcept;
+private:
+    const DCKPInstance *instance_;
+    std::set<ItemId> selected_items_{};
+    TotalProfit total_profit_{0};
+    TotalWeight total_weight_{0};
+    bool is_feasible_{true};
+    Seconds computation_time_{0.0};
+    std::string method_name_{"Unknown"};
 };

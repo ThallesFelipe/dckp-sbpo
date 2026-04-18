@@ -7,8 +7,8 @@ int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        std::cout << "Uso: dckp_sbpo <caminho_da_instancia>\n";
-        return 0;
+        std::cerr << "Uso: dckp_sbpo <caminho_da_instancia>\n";
+        return 2;
     }
 
     const std::filesystem::path instance_path{argv[1]};

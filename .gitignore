@@ -4,7 +4,7 @@
 /cmake-build-*/
 
 # Local datasets (large, generated/collected externally)
-/DCKP-instances/
+/DCKP-instances/DCKP-instances-set-II-6240/
 
 # CMake generated files
 /CMakeFiles/
@@ -38,3 +38,7 @@
 /.github/
 *.user
 *.suo
+
+# Claude
+/.claude/
+/CLAUDE.MD
