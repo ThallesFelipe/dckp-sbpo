@@ -44,6 +44,8 @@ add_library(dckp_core STATIC
     src/utils/validator.cpp
     src/algorithms/runner.cpp
     src/constructive/greedy_max_profit.cpp
+    src/local_search/vnd.cpp
+    src/local_search/ils.cpp
 )
 target_include_directories(dckp_core PUBLIC src)
 

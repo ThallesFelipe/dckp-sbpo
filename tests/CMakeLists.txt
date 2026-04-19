@@ -1,3 +1,6 @@
+
+
+
 set(DCKP_TESTS
     test_parser_compact
     test_parser_ampl
@@ -5,6 +8,8 @@ set(DCKP_TESTS
     test_validator_invalid
     test_solution_comparison
     test_greedy_max_profit
+    test_vnd
+    test_ils
 )
 
 foreach(test_name IN LISTS DCKP_TESTS)
