@@ -1,75 +1,257 @@
+#include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <memory>
+#include <string>
+#include <string_view>
 
 #include "utils/instance_reader.h"
 #include "utils/validator.h"
+#include "algorithms/algorithm.h"
 #include "algorithms/runner.h"
 #include "constructive/greedy_max_profit.h"
 #include "local_search/ils.h"
 #include "local_search/vnd.h"
+#include "local_search/vns.h"
+
+namespace
+{
+    /**
+     * @brief Case-insensitive comparison of two ASCII strings — used to
+     * accept algorithm names regardless of capitalization on the CLI.
+     */
+    [[nodiscard]] bool iequals(std::string_view a, std::string_view b) noexcept
+    {
+        if (a.size() != b.size())
+        {
+            return false;
+        }
+        for (std::size_t i = 0; i < a.size(); ++i)
+        {
+            const auto ca = static_cast<unsigned char>(a[i]);
+            const auto cb = static_cast<unsigned char>(b[i]);
+            if (std::tolower(ca) != std::tolower(cb))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @brief Minimal algorithm factory — stays intentionally local to
+     * main.cpp so that Runner::execute() does not have to become a
+     * registry. Returns @c nullptr on an unknown name.
+     */
+    [[nodiscard]] std::unique_ptr<dckp::Algorithm> makeAlgorithm(std::string_view name)
+    {
+        if (iequals(name, "Greedy_MaxProfit") || iequals(name, "Greedy"))
+        {
+            return std::make_unique<dckp::GreedyMaxProfit>();
+        }
+        if (iequals(name, "VND"))
+        {
+            return std::make_unique<dckp::VND>();
+        }
+        if (iequals(name, "ILS"))
+        {
+            return std::make_unique<dckp::ILS>();
+        }
+        if (iequals(name, "VNS"))
+        {
+            return std::make_unique<dckp::VNS>();
+        }
+        return nullptr;
+    }
+
+    struct CliOptions
+    {
+        std::filesystem::path instance_path{};
+        std::string algo{"VNS"};
+        std::int64_t time_limit_ms{10000};
+        std::uint64_t seed{42};
+        bool csv{false};
+        bool verbose{false};
+    };
+
+    [[nodiscard]] bool needsValue(std::string_view flag) noexcept
+    {
+        return flag == "--algo" || flag == "--time-limit" || flag == "--seed";
+    }
+
+    /**
+     * @brief Parses argv into @p opts. On error prints a usage hint to
+     * stderr and returns false. The binary's single positional argument
+     * is the instance path.
+     */
+    [[nodiscard]] bool parseCli(int argc, char *argv[], CliOptions &opts)
+    {
+        for (int i = 1; i < argc; ++i)
+        {
+            std::string_view arg{argv[i]};
+            if (arg == "--verbose" || arg == "-v")
+            {
+                opts.verbose = true;
+                continue;
+            }
+            if (arg == "--csv")
+            {
+                opts.csv = true;
+                continue;
+            }
+            if (needsValue(arg))
+            {
+                if (i + 1 >= argc)
+                {
+                    std::cerr << "Missing value for " << arg << '\n';
+                    return false;
+                }
+                const std::string_view value{argv[++i]};
+                if (arg == "--algo")
+                {
+                    opts.algo = std::string{value};
+                }
+                else if (arg == "--time-limit")
+                {
+                    try
+                    {
+                        opts.time_limit_ms = std::stoll(std::string{value});
+                    }
+                    catch (...)
+                    {
+                        std::cerr << "Invalid --time-limit: " << value << '\n';
+                        return false;
+                    }
+                }
+                else if (arg == "--seed")
+                {
+                    try
+                    {
+                        opts.seed = std::stoull(std::string{value});
+                    }
+                    catch (...)
+                    {
+                        std::cerr << "Invalid --seed: " << value << '\n';
+                        return false;
+                    }
+                }
+                continue;
+            }
+            if (!arg.empty() && arg[0] == '-')
+            {
+                std::cerr << "Unknown option: " << arg << '\n';
+                return false;
+            }
+            if (!opts.instance_path.empty())
+            {
+                std::cerr << "Unexpected extra argument: " << arg << '\n';
+                return false;
+            }
+            opts.instance_path = std::filesystem::path{arg};
+        }
+        return !opts.instance_path.empty();
+    }
+
+    /**
+     * @brief Prints a one-line usage hint to stderr.
+     */
+    void printUsage()
+    {
+        std::cerr
+            << "Usage: dckp_sbpo <instance_path> [--algo NAME] [--time-limit MS] "
+               "[--seed N] [--csv] [--verbose]\n"
+               "  --algo: Greedy_MaxProfit | VND | ILS | VNS (default: VNS)\n"
+               "  --time-limit: milliseconds (default: 10000)\n"
+               "  --seed: uint64 (default: 42)\n"
+               "  --csv: emit a single CSV row without a header\n";
+    }
+
+    /**
+     * @brief Strips the trailing extension from @p path's filename, so
+     * "20I5.txt" and "1I1" both map to a clean identifier for the CSV.
+     */
+    [[nodiscard]] std::string instanceBaseName(const std::filesystem::path &path)
+    {
+        return path.stem().string();
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2)
+    CliOptions opts;
+    if (!parseCli(argc, argv, opts))
     {
-        std::cerr << "Usage: dckp_sbpo <instance_path>\n";
+        printUsage();
         return 2;
     }
 
-    const std::filesystem::path instance_path{argv[1]};
-
     DCKPInstance instance;
-    if (!instance.read_from_file(instance_path))
+    if (!instance.read_from_file(opts.instance_path))
     {
         std::cerr << "Failed to read instance: " << instance.last_error() << '\n';
         return 1;
     }
 
-    instance.print();
+    auto algorithm = makeAlgorithm(opts.algo);
+    if (!algorithm)
+    {
+        std::cerr << "Unknown --algo: " << opts.algo << '\n';
+        printUsage();
+        return 2;
+    }
+
+    if (opts.verbose)
+    {
+        instance.print();
+    }
 
     dckp::RunnerConfig config;
-    config.seed = 42;
+    config.seed = opts.seed;
+    config.time_limit =
+        std::chrono::milliseconds{std::max<std::int64_t>(0, opts.time_limit_ms)};
+
     dckp::Runner runner(instance);
+    Solution solution = runner.execute(*algorithm, config);
+
     Validator validator(instance);
+    const bool valid = validator.validate(solution);
 
-    dckp::GreedyMaxProfit greedy;
-    Solution greedy_sol = runner.execute(greedy, config);
-    std::cout << '\n'
-              << validator.validateDetailed(greedy_sol) << '\n';
-    greedy_sol.print();
+    if (opts.verbose)
+    {
+        std::cerr << validator.validateDetailed(solution) << '\n';
+        solution.print();
+    }
 
-    dckp::VND vnd;
-    Solution vnd_sol = runner.execute(vnd, config);
-    std::cout << '\n'
-              << validator.validateDetailed(vnd_sol) << '\n';
-    vnd_sol.print();
+    const auto time_ms =
+        static_cast<long long>(std::llround(solution.computationTime() * 1000.0));
 
-    dckp::RunnerConfig ils_config = config;
-    ils_config.time_limit = std::chrono::milliseconds{2000};
-    dckp::ILS ils;
-    Solution ils_sol = runner.execute(ils, ils_config);
-    std::cout << '\n'
-              << validator.validateDetailed(ils_sol) << '\n';
-    ils_sol.print();
+    if (opts.csv)
+    {
+        std::cout << instanceBaseName(opts.instance_path)
+                  << ',' << opts.seed
+                  << ',' << solution.totalProfit()
+                  << ',' << solution.totalWeight()
+                  << ',' << instance.capacity()
+                  << ',' << time_ms
+                  << ',' << (valid ? "true" : "false")
+                  << ',' << solution.methodName()
+                  << '\n';
+        return 0;
+    }
 
-    std::cout << "\nCSV_OUTPUT,"
-              << instance_path.filename().string() << ','
-              << greedy_sol.methodName() << ','
-              << greedy_sol.totalProfit() << ','
-              << greedy_sol.computationTime() << '\n';
-
-    std::cout << "CSV_OUTPUT,"
-              << instance_path.filename().string() << ','
-              << vnd_sol.methodName() << ','
-              << vnd_sol.totalProfit() << ','
-              << vnd_sol.computationTime() << '\n';
-
-    std::cout << "CSV_OUTPUT,"
-              << instance_path.filename().string() << ','
-              << ils_sol.methodName() << ','
-              << ils_sol.totalProfit() << ','
-              << ils_sol.computationTime() << '\n';
+    std::cout << "instance=" << instanceBaseName(opts.instance_path)
+              << " algorithm=" << solution.methodName()
+              << " profit=" << solution.totalProfit()
+              << " weight=" << solution.totalWeight()
+              << " capacity=" << instance.capacity()
+              << " time_ms=" << time_ms
+              << " valid=" << (valid ? "true" : "false")
+              << '\n';
 
     return 0;
 }

@@ -105,7 +105,6 @@ namespace dckp
 
             PerturbState state(instance, sol);
 
-            // Phase 1 — random destruction via partial Fisher–Yates.
             std::vector<ItemId> selected(sol.selectedItems().begin(),
                                          sol.selectedItems().end());
             const auto clamped_strength = static_cast<std::size_t>(std::max(0, strength));
@@ -120,7 +119,6 @@ namespace dckp
                 state.applyRemove(selected[i]);
             }
 
-            // Phase 2 — greedy fill in decreasing profit (ties: lighter first).
             const auto n = instance.n_items();
             const auto &profits = instance.profits();
             const auto &weights = instance.weights();

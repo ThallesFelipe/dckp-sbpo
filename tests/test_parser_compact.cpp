@@ -3,8 +3,6 @@
 
 int main()
 {
-    // Compact: n=5, declared_conflicts=3, capacity=10
-    //          profits     weights         edges (1-based)
     const std::string content =
         "5 3 10\n"
         "7 3 4 8 2\n"
@@ -19,7 +17,6 @@ int main()
     DCKP_CHECK_EQ(inst.capacity(), 10);
     DCKP_CHECK_EQ(inst.n_conflicts(), 3U);
 
-    // Verify profits/weights.
     const std::vector<int> expected_profits{7, 3, 4, 8, 2};
     const std::vector<int> expected_weights{2, 1, 3, 5, 1};
     DCKP_CHECK_EQ(inst.profits().size(), 5U);
@@ -29,7 +26,6 @@ int main()
         DCKP_CHECK_EQ(inst.weights()[i], expected_weights[i]);
     }
 
-    // Edges should be normalized to 0-based: {(0,1),(1,2),(3,4)}.
     DCKP_CHECK(inst.has_conflict(0, 1));
     DCKP_CHECK(inst.has_conflict(1, 2));
     DCKP_CHECK(inst.has_conflict(3, 4));

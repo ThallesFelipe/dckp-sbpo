@@ -3,9 +3,6 @@
 
 int main()
 {
-    // Deliberately quirky spacing: extra spaces, tabs, leading/trailing
-    // whitespace on each line, and blank lines. Tolerant detection + param
-    // parsing must accept all of it.
     const std::string content =
         "   param   n   :=   4 ;\n"
         "\tparam   c :=   20;\n"
@@ -38,7 +35,6 @@ int main()
     DCKP_CHECK_EQ(inst.weights()[1], 4);
     DCKP_CHECK_EQ(inst.weights()[2], 6);
 
-    // AMPL-like uses 0-based indices; conflict edges preserved as-is.
     DCKP_CHECK(inst.has_conflict(0, 1));
     DCKP_CHECK(inst.has_conflict(2, 3));
     DCKP_CHECK(!inst.has_conflict(1, 2));

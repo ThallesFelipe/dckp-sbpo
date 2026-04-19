@@ -3,7 +3,6 @@
 
 namespace
 {
-    // Returns true iff inst has edges exactly {(0,1),(1,2),(3,4)} (0-based).
     bool has_expected_edges(const DCKPInstance &inst)
     {
         if (inst.n_conflicts() != 3U)
@@ -16,15 +15,12 @@ namespace
 
 int main()
 {
-    // Compact dataset, conflicts expressed 1-based (classic Set I layout).
     const std::string one_based =
         "5 3 10\n"
         "7 3 4 8 2\n"
         "2 1 3 5 1\n"
         "1 2  2 3  4 5\n";
 
-    // Compact dataset, conflicts expressed 0-based. Here indices 0 appear
-    // and index n does not, which disambiguates to 0-based.
     const std::string zero_based =
         "5 3 10\n"
         "7 3 4 8 2\n"
@@ -44,7 +40,6 @@ int main()
         DCKP_CHECK(has_expected_edges(inst));
     }
 
-    // AMPL-like is always 0-based.
     const std::string ampl_zero_based =
         "param n := 5;\n"
         "param c := 10;\n"

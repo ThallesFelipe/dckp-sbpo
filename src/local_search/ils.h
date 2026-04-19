@@ -19,8 +19,8 @@ namespace dckp
      */
     struct ILSConfig
     {
-        int perturbation_strength{4}; ///< Items removed per perturbation kick.
-        VNDConfig vnd_config{};       ///< Neighborhood schedule for the inner VND.
+        int perturbation_strength{4};
+        VNDConfig vnd_config{};
     };
 
     /**

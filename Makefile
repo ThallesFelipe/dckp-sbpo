@@ -1,54 +1,41 @@
-BUILD_DIR   ?= build
-GENERATOR   ?= Ninja
+BUILD_DIR   := build
+GENERATOR   := Ninja
 APP_NAME    := dckp_sbpo
 APP         := $(BUILD_DIR)/$(APP_NAME)
 INSTANCE    ?=
 
-# Compiler selection is left to CMake by default. Set CXX in the environment
-# (e.g. `CXX=g++-14 make debug`) to override, or pass -DCMAKE_CXX_COMPILER=...
-# via CMAKE_FLAGS.
 CMAKE_FLAGS ?=
 
-.PHONY: all debug release run run-release test clean help
+.PHONY: all help configure build test run clean
 
-all: debug
+all: build
 
 help:
-	@echo "Targets:"
-	@echo "  debug        Configure+build Debug (sanitizers + hardening)."
-	@echo "  release      Configure+build Release (hardening, no sanitizers)."
-	@echo "  test         Build Debug and run the test suite via CTest."
-	@echo "  run          Build Debug and run the CLI. Set INSTANCE=<path>."
-	@echo "  run-release  Build Release and run the CLI. Set INSTANCE=<path>."
-	@echo "  clean        Remove the build directory."
+	@echo "Supported workflow (WSL Ubuntu 24.04 only):"
+	@echo "  make build                Configure and build into build/."
+	@echo "  make test                 Build once in build/ and run CTest."
+	@echo "  make run INSTANCE=path    Build once in build/ and run the CLI."
+	@echo "  make clean                Remove build/."
 
-debug:
-	cmake -S . -B $(BUILD_DIR) -G $(GENERATOR) \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DDCKP_ENABLE_SANITIZERS=ON \
-		-DDCKP_ENABLE_HARDENING=ON \
-		$(CMAKE_FLAGS)
-	cmake --build $(BUILD_DIR) -j
+configure:
+	@command -v ninja >/dev/null 2>&1 || { \
+		echo "Ninja is required in WSL Ubuntu 24.04. Install it with: sudo apt install ninja-build"; \
+		exit 1; \
+	}
+	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ] && \
+		! grep -q '^CMAKE_GENERATOR:INTERNAL=$(GENERATOR)$$' "$(BUILD_DIR)/CMakeCache.txt"; then \
+		echo ">>> Recreating $(BUILD_DIR)/ to switch CMake generator to $(GENERATOR)."; \
+		rm -rf "$(BUILD_DIR)"; \
+	fi
+	cmake -S . -B $(BUILD_DIR) -G "$(GENERATOR)" -DCMAKE_BUILD_TYPE=Release -DDCKP_ENABLE_SANITIZERS=OFF -DDCKP_ENABLE_HARDENING=ON $(CMAKE_FLAGS)
 
-release:
-	cmake -S . -B $(BUILD_DIR) -G $(GENERATOR) \
-		-DCMAKE_BUILD_TYPE=Release \
-		-DDCKP_ENABLE_SANITIZERS=OFF \
-		-DDCKP_ENABLE_HARDENING=ON \
-		$(CMAKE_FLAGS)
-	cmake --build $(BUILD_DIR) -j
+build: configure
+	cmake --build $(BUILD_DIR) --parallel
 
-test: debug
+test: build
 	ctest --test-dir $(BUILD_DIR) --output-on-failure
 
-run: debug
-	@if [ -n "$(INSTANCE)" ]; then \
-		./$(APP) "$(INSTANCE)"; \
-	else \
-		./$(APP); \
-	fi
-
-run-release: release
+run: build
 	@if [ -n "$(INSTANCE)" ]; then \
 		./$(APP) "$(INSTANCE)"; \
 	else \

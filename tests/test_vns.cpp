@@ -8,8 +8,8 @@
 #include "algorithms/runner.h"
 #include "algorithms/stopping_criteria.h"
 #include "constructive/greedy_max_profit.h"
-#include "local_search/ils.h"
 #include "local_search/vnd.h"
+#include "local_search/vns.h"
 
 #include <iostream>
 #include <string_view>
@@ -47,9 +47,9 @@ static constexpr std::string_view kPlateauInstance =
     "set E :=\n"
     ";\n";
 
-static int test_ils_feasible_and_named()
+static int test_vns_feasible_and_named()
 {
-    dckp_test::ScopedTempFile tmp("ils_small", kSmallInstance);
+    dckp_test::ScopedTempFile tmp("vns_small", kSmallInstance);
     DCKPInstance instance;
     DCKP_CHECK(instance.read_from_file(tmp.path()));
 
@@ -58,22 +58,22 @@ static int test_ils_feasible_and_named()
     config.iteration_limit = 50;
     dckp::Runner runner(instance);
 
-    dckp::ILS ils;
-    Solution sol = runner.execute(ils, config);
+    dckp::VNS vns;
+    Solution sol = runner.execute(vns, config);
 
     Validator validator(instance);
     DCKP_CHECK(validator.validate(sol));
-    DCKP_CHECK(sol.methodName() == "ILS");
+    DCKP_CHECK(sol.methodName() == "VNS");
 
     DCKP_CHECK(sol.totalProfit() >= std::int64_t{115});
 
-    std::cout << "test_ils_feasible_and_named PASSED\n";
+    std::cout << "test_vns_feasible_and_named PASSED\n";
     return 0;
 }
 
-static int test_ils_never_worse_than_vnd()
+static int test_vns_never_worse_than_vnd()
 {
-    dckp_test::ScopedTempFile tmp("ils_not_worse", kSmallInstance);
+    dckp_test::ScopedTempFile tmp("vns_not_worse", kSmallInstance);
     DCKPInstance instance;
     DCKP_CHECK(instance.read_from_file(tmp.path()));
 
@@ -85,22 +85,47 @@ static int test_ils_never_worse_than_vnd()
     dckp::VND vnd;
     Solution vnd_sol = runner.execute(vnd, config);
 
-    dckp::ILS ils;
-    Solution ils_sol = runner.execute(ils, config);
+    dckp::VNS vns;
+    Solution vns_sol = runner.execute(vns, config);
 
     Validator validator(instance);
     DCKP_CHECK(validator.validate(vnd_sol));
-    DCKP_CHECK(validator.validate(ils_sol));
+    DCKP_CHECK(validator.validate(vns_sol));
 
-    DCKP_CHECK(ils_sol.totalProfit() >= vnd_sol.totalProfit());
+    DCKP_CHECK(vns_sol.totalProfit() >= vnd_sol.totalProfit());
 
-    std::cout << "test_ils_never_worse_than_vnd PASSED\n";
+    std::cout << "test_vns_never_worse_than_vnd PASSED\n";
     return 0;
 }
 
-static int test_ils_zero_capacity()
+static int test_vns_k_max_zero_is_clamped()
 {
-    dckp_test::ScopedTempFile tmp("ils_zerocap", kZeroCapacityInstance);
+    dckp_test::ScopedTempFile tmp("vns_kmax_zero", kSmallInstance);
+    DCKPInstance instance;
+    DCKP_CHECK(instance.read_from_file(tmp.path()));
+
+    dckp::VNSConfig cfg;
+    cfg.k_max = 0;
+    dckp::VNS vns(cfg);
+
+    dckp::RunnerConfig config;
+    config.seed = 5;
+    config.iteration_limit = 50;
+    dckp::Runner runner(instance);
+
+    Solution sol = runner.execute(vns, config);
+
+    Validator validator(instance);
+    DCKP_CHECK(validator.validate(sol));
+    DCKP_CHECK(sol.totalProfit() >= std::int64_t{115});
+
+    std::cout << "test_vns_k_max_zero_is_clamped PASSED\n";
+    return 0;
+}
+
+static int test_vns_zero_capacity()
+{
+    dckp_test::ScopedTempFile tmp("vns_zerocap", kZeroCapacityInstance);
     DCKPInstance instance;
     DCKP_CHECK(instance.read_from_file(tmp.path()));
 
@@ -109,47 +134,21 @@ static int test_ils_zero_capacity()
     config.iteration_limit = 20;
     dckp::Runner runner(instance);
 
-    dckp::ILS ils;
-    Solution sol = runner.execute(ils, config);
+    dckp::VNS vns;
+    Solution sol = runner.execute(vns, config);
 
     Validator validator(instance);
     DCKP_CHECK(validator.validate(sol));
     DCKP_CHECK(sol.empty());
     DCKP_CHECK_EQ(sol.totalProfit(), std::int64_t{0});
 
-    std::cout << "test_ils_zero_capacity PASSED\n";
+    std::cout << "test_vns_zero_capacity PASSED\n";
     return 0;
 }
 
-static int test_ils_plateau_acceptance_preserves_best()
+static int test_vns_respects_small_iteration_limit()
 {
-    dckp_test::ScopedTempFile tmp("ils_plateau", kPlateauInstance);
-    DCKPInstance instance;
-    DCKP_CHECK(instance.read_from_file(tmp.path()));
-
-    dckp::RunnerConfig config;
-    config.seed = 9;
-    config.iteration_limit = 300;
-    dckp::Runner runner(instance);
-
-    dckp::ILSConfig cfg;
-    cfg.perturbation_strength = 2;
-    dckp::ILS ils(cfg);
-
-    Solution sol = runner.execute(ils, config);
-
-    Validator validator(instance);
-    DCKP_CHECK(validator.validate(sol));
-    DCKP_CHECK_EQ(sol.totalProfit(), std::int64_t{120});
-    DCKP_CHECK_EQ(sol.size(), std::size_t{2});
-
-    std::cout << "test_ils_plateau_acceptance_preserves_best PASSED\n";
-    return 0;
-}
-
-static int test_ils_respects_iteration_limit()
-{
-    dckp_test::ScopedTempFile tmp("ils_iter", kSmallInstance);
+    dckp_test::ScopedTempFile tmp("vns_iter", kSmallInstance);
     DCKPInstance instance;
     DCKP_CHECK(instance.read_from_file(tmp.path()));
 
@@ -158,24 +157,51 @@ static int test_ils_respects_iteration_limit()
     config.iteration_limit = 1;
     dckp::Runner runner(instance);
 
-    dckp::ILS ils;
-    Solution sol = runner.execute(ils, config);
+    dckp::VNS vns;
+    Solution sol = runner.execute(vns, config);
 
     Validator validator(instance);
     DCKP_CHECK(validator.validate(sol));
 
-    std::cout << "test_ils_respects_iteration_limit PASSED\n";
+    std::cout << "test_vns_respects_small_iteration_limit PASSED\n";
+    return 0;
+}
+
+static int test_vns_shake_preserves_feasibility_plateau()
+{
+    dckp_test::ScopedTempFile tmp("vns_plateau", kPlateauInstance);
+    DCKPInstance instance;
+    DCKP_CHECK(instance.read_from_file(tmp.path()));
+
+    dckp::RunnerConfig config;
+    config.seed = 9;
+    config.iteration_limit = 300;
+    dckp::Runner runner(instance);
+
+    dckp::VNSConfig cfg;
+    cfg.k_max = 3;
+    dckp::VNS vns(cfg);
+
+    Solution sol = runner.execute(vns, config);
+
+    Validator validator(instance);
+    DCKP_CHECK(validator.validate(sol));
+    DCKP_CHECK_EQ(sol.totalProfit(), std::int64_t{120});
+    DCKP_CHECK_EQ(sol.size(), std::size_t{2});
+
+    std::cout << "test_vns_shake_preserves_feasibility_plateau PASSED\n";
     return 0;
 }
 
 int main()
 {
     int failures = 0;
-    failures += test_ils_feasible_and_named();
-    failures += test_ils_never_worse_than_vnd();
-    failures += test_ils_zero_capacity();
-    failures += test_ils_plateau_acceptance_preserves_best();
-    failures += test_ils_respects_iteration_limit();
+    failures += test_vns_feasible_and_named();
+    failures += test_vns_never_worse_than_vnd();
+    failures += test_vns_k_max_zero_is_clamped();
+    failures += test_vns_zero_capacity();
+    failures += test_vns_respects_small_iteration_limit();
+    failures += test_vns_shake_preserves_feasibility_plateau();
 
     if (failures != 0)
     {

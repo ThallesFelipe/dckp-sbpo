@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BINARY="${SCRIPT_DIR}/build/dckp_sbpo"
+
+if [[ ! -x "${BINARY}" ]]; then
+    echo "Binary not found at ${BINARY}. Run 'make build' first." >&2
+    exit 1
+fi
+
+if [[ $# -ge 1 && "${1}" != -* ]]; then
+    instance_path="$1"
+    shift
+
+    if [[ $# -eq 0 ]]; then
+        exec "${BINARY}" "${instance_path}" --csv
+    fi
+    if [[ $# -eq 1 && "${1}" != -* ]]; then
+        exec "${BINARY}" "${instance_path}" --seed "$1" --csv
+    fi
+    if [[ $# -eq 2 && "${1}" != -* && "${2}" != -* ]]; then
+        exec "${BINARY}" "${instance_path}" --seed "$1" --time-limit "$2" --csv
+    fi
+
+    exec "${BINARY}" "${instance_path}" "$@"
+fi
+
+exec "${BINARY}" "$@"

@@ -10,6 +10,7 @@ set(DCKP_TESTS
     test_greedy_max_profit
     test_vnd
     test_ils
+    test_vns
 )
 
 foreach(test_name IN LISTS DCKP_TESTS)

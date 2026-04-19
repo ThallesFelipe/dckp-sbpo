@@ -16,10 +16,10 @@ namespace dckp
      */
     struct VNDConfig
     {
-        bool enable_add{true};       ///< N1 — add one unselected feasible item.
-        bool enable_swap_1_1{true};  ///< N2 — remove one, add one with strictly higher profit.
-        bool enable_swap_2_1{true};  ///< N3 — remove two, add one with strictly higher combined profit.
-        bool enable_swap_1_2{true};  ///< N4 — remove one, add two with strictly higher combined profit.
+        bool enable_add{true};
+        bool enable_swap_1_1{true};
+        bool enable_swap_2_1{true};
+        bool enable_swap_1_2{true};
     };
 
     /**

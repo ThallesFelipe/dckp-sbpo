@@ -1,10 +1,9 @@
 # Build directories
 /build/
-/build-wsl/
 /out/
 /cmake-build-*/
 
-# Local datasets (large, generated/collected externally)
+# Local datasets
 /DCKP-instances/DCKP-instances-set-II-6240/
 
 # CMake generated files
