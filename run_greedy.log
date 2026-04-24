@@ -1,0 +1,158 @@
+nohup: ignoring input
+>>> Building unified WSL target in build/ ...
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DDCKP_ENABLE_SANITIZERS=OFF -DDCKP_ENABLE_HARDENING=ON 
+-- Configuring done (0.7s)
+-- Generating done (0.1s)
+-- Build files have been written to: /mnt/c/Users/thall/Documents/dckp-sbpo/build
+cmake --build build --parallel
+[1/29] Building CXX object tests/CMakeFiles/test_parser_ampl.dir/test_parser_ampl.cpp.o
+[2/29] Building CXX object CMakeFiles/dckp_core.dir/src/utils/solution.cpp.o
+[3/29] Building CXX object tests/CMakeFiles/test_index_normalization.dir/test_index_normalization.cpp.o
+[4/29] Building CXX object tests/CMakeFiles/test_parser_compact.dir/test_parser_compact.cpp.o
+[5/29] Building CXX object tests/CMakeFiles/test_solution_comparison.dir/test_solution_comparison.cpp.o
+[6/29] Building CXX object CMakeFiles/dckp_core.dir/src/utils/validator.cpp.o
+[7/29] Building CXX object CMakeFiles/dckp_core.dir/src/algorithms/runner.cpp.o
+[8/29] Building CXX object CMakeFiles/dckp_core.dir/src/constructive/greedy_max_profit.cpp.o
+[9/29] Building CXX object tests/CMakeFiles/test_validator_invalid.dir/test_validator_invalid.cpp.o
+[10/29] Building CXX object CMakeFiles/dckp_core.dir/src/local_search/ils.cpp.o
+[11/29] Building CXX object tests/CMakeFiles/test_greedy_max_profit.dir/test_greedy_max_profit.cpp.o
+[12/29] Building CXX object CMakeFiles/dckp_sbpo.dir/src/main.cpp.o
+[13/29] Building CXX object CMakeFiles/dckp_core.dir/src/local_search/vns.cpp.o
+[14/29] Building CXX object tests/CMakeFiles/test_ils.dir/test_ils.cpp.o
+[15/29] Building CXX object tests/CMakeFiles/test_vns.dir/test_vns.cpp.o
+[16/29] Building CXX object CMakeFiles/dckp_core.dir/src/local_search/vnd.cpp.o
+[17/29] Building CXX object tests/CMakeFiles/test_vnd.dir/test_vnd.cpp.o
+[18/29] Building CXX object CMakeFiles/dckp_core.dir/src/utils/instance_reader.cpp.o
+[19/29] Linking CXX static library libdckp_core.a
+[20/29] Linking CXX executable tests/test_parser_ampl
+[21/29] Linking CXX executable tests/test_index_normalization
+[22/29] Linking CXX executable tests/test_parser_compact
+[23/29] Linking CXX executable tests/test_solution_comparison
+[24/29] Linking CXX executable tests/test_validator_invalid
+[25/29] Linking CXX executable tests/test_greedy_max_profit
+[26/29] Linking CXX executable tests/test_vnd
+[27/29] Linking CXX executable tests/test_vns
+[28/29] Linking CXX executable tests/test_ils
+[29/29] Linking CXX executable dckp_sbpo
+[inst 1/100 | run 1/1] 10I1 -> profit=2210 (0ms, valid=true)
+[inst 2/100 | run 1/1] 10I2 -> profit=2210 (0ms, valid=true)
+[inst 3/100 | run 1/1] 10I3 -> profit=2210 (0ms, valid=true)
+[inst 4/100 | run 1/1] 10I4 -> profit=2210 (0ms, valid=true)
+[inst 5/100 | run 1/1] 10I5 -> profit=2210 (0ms, valid=true)
+[inst 6/100 | run 1/1] 1I1 -> profit=2000 (0ms, valid=true)
+[inst 7/100 | run 1/1] 1I2 -> profit=1988 (0ms, valid=true)
+[inst 8/100 | run 1/1] 1I3 -> profit=2000 (0ms, valid=true)
+[inst 9/100 | run 1/1] 1I4 -> profit=1990 (0ms, valid=true)
+[inst 10/100 | run 1/1] 1I5 -> profit=1990 (0ms, valid=true)
+[inst 11/100 | run 1/1] 2I1 -> profit=1753 (0ms, valid=true)
+[inst 12/100 | run 1/1] 2I2 -> profit=1803 (0ms, valid=true)
+[inst 13/100 | run 1/1] 2I3 -> profit=1851 (0ms, valid=true)
+[inst 14/100 | run 1/1] 2I4 -> profit=1985 (0ms, valid=true)
+[inst 15/100 | run 1/1] 2I5 -> profit=1979 (0ms, valid=true)
+[inst 16/100 | run 1/1] 3I1 -> profit=1315 (0ms, valid=true)
+[inst 17/100 | run 1/1] 3I2 -> profit=1407 (0ms, valid=true)
+[inst 18/100 | run 1/1] 3I3 -> profit=1390 (0ms, valid=true)
+[inst 19/100 | run 1/1] 3I4 -> profit=1396 (0ms, valid=true)
+[inst 20/100 | run 1/1] 3I5 -> profit=1365 (0ms, valid=true)
+[inst 21/100 | run 1/1] 4I1 -> profit=981 (0ms, valid=true)
+[inst 22/100 | run 1/1] 4I2 -> profit=1118 (0ms, valid=true)
+[inst 23/100 | run 1/1] 4I3 -> profit=1109 (0ms, valid=true)
+[inst 24/100 | run 1/1] 4I4 -> profit=1209 (0ms, valid=true)
+[inst 25/100 | run 1/1] 4I5 -> profit=859 (0ms, valid=true)
+[inst 26/100 | run 1/1] 5I1 -> profit=1990 (0ms, valid=true)
+[inst 27/100 | run 1/1] 5I2 -> profit=1990 (0ms, valid=true)
+[inst 28/100 | run 1/1] 5I3 -> profit=1990 (0ms, valid=true)
+[inst 29/100 | run 1/1] 5I4 -> profit=1990 (0ms, valid=true)
+[inst 30/100 | run 1/1] 5I5 -> profit=1990 (0ms, valid=true)
+[inst 31/100 | run 1/1] 6I1 -> profit=2210 (0ms, valid=true)
+[inst 32/100 | run 1/1] 6I2 -> profit=2210 (0ms, valid=true)
+[inst 33/100 | run 1/1] 6I3 -> profit=2210 (0ms, valid=true)
+[inst 34/100 | run 1/1] 6I4 -> profit=2210 (0ms, valid=true)
+[inst 35/100 | run 1/1] 6I5 -> profit=2210 (0ms, valid=true)
+[inst 36/100 | run 1/1] 7I1 -> profit=2220 (0ms, valid=true)
+[inst 37/100 | run 1/1] 7I2 -> profit=2210 (0ms, valid=true)
+[inst 38/100 | run 1/1] 7I3 -> profit=2210 (0ms, valid=true)
+[inst 39/100 | run 1/1] 7I4 -> profit=2210 (0ms, valid=true)
+[inst 40/100 | run 1/1] 7I5 -> profit=2220 (0ms, valid=true)
+[inst 41/100 | run 1/1] 8I1 -> profit=2210 (0ms, valid=true)
+[inst 42/100 | run 1/1] 8I2 -> profit=2209 (0ms, valid=true)
+[inst 43/100 | run 1/1] 8I3 -> profit=2210 (0ms, valid=true)
+[inst 44/100 | run 1/1] 8I4 -> profit=2210 (0ms, valid=true)
+[inst 45/100 | run 1/1] 8I5 -> profit=2209 (0ms, valid=true)
+[inst 46/100 | run 1/1] 9I1 -> profit=2210 (0ms, valid=true)
+[inst 47/100 | run 1/1] 9I2 -> profit=2210 (0ms, valid=true)
+[inst 48/100 | run 1/1] 9I3 -> profit=2210 (0ms, valid=true)
+[inst 49/100 | run 1/1] 9I4 -> profit=2209 (0ms, valid=true)
+[inst 50/100 | run 1/1] 9I5 -> profit=2210 (0ms, valid=true)
+[inst 51/100 | run 1/1] 11I1 -> profit=4110 (0ms, valid=true)
+[inst 52/100 | run 1/1] 11I2 -> profit=4110 (0ms, valid=true)
+[inst 53/100 | run 1/1] 11I3 -> profit=4110 (1ms, valid=true)
+[inst 54/100 | run 1/1] 11I4 -> profit=4110 (0ms, valid=true)
+[inst 55/100 | run 1/1] 11I5 -> profit=4110 (0ms, valid=true)
+[inst 56/100 | run 1/1] 12I1 -> profit=4120 (1ms, valid=true)
+[inst 57/100 | run 1/1] 12I2 -> profit=4110 (1ms, valid=true)
+[inst 58/100 | run 1/1] 12I3 -> profit=4120 (1ms, valid=true)
+[inst 59/100 | run 1/1] 12I4 -> profit=4120 (0ms, valid=true)
+[inst 60/100 | run 1/1] 12I5 -> profit=4110 (0ms, valid=true)
+[inst 61/100 | run 1/1] 13I1 -> profit=4109 (1ms, valid=true)
+[inst 62/100 | run 1/1] 13I2 -> profit=4110 (1ms, valid=true)
+[inst 63/100 | run 1/1] 13I3 -> profit=4120 (1ms, valid=true)
+[inst 64/100 | run 1/1] 13I4 -> profit=4110 (1ms, valid=true)
+[inst 65/100 | run 1/1] 13I5 -> profit=4109 (0ms, valid=true)
+[inst 66/100 | run 1/1] 14I1 -> profit=4110 (0ms, valid=true)
+[inst 67/100 | run 1/1] 14I2 -> profit=4108 (0ms, valid=true)
+[inst 68/100 | run 1/1] 14I3 -> profit=4120 (0ms, valid=true)
+[inst 69/100 | run 1/1] 14I4 -> profit=4110 (0ms, valid=true)
+[inst 70/100 | run 1/1] 14I5 -> profit=4110 (0ms, valid=true)
+[inst 71/100 | run 1/1] 15I1 -> profit=4108 (0ms, valid=true)
+[inst 72/100 | run 1/1] 15I2 -> profit=4109 (0ms, valid=true)
+[inst 73/100 | run 1/1] 15I3 -> profit=4110 (0ms, valid=true)
+[inst 74/100 | run 1/1] 15I4 -> profit=4120 (0ms, valid=true)
+[inst 75/100 | run 1/1] 15I5 -> profit=4110 (0ms, valid=true)
+[inst 76/100 | run 1/1] 16I1 -> profit=4110 (0ms, valid=true)
+[inst 77/100 | run 1/1] 16I2 -> profit=4110 (0ms, valid=true)
+[inst 78/100 | run 1/1] 16I3 -> profit=4110 (0ms, valid=true)
+[inst 79/100 | run 1/1] 16I4 -> profit=4110 (0ms, valid=true)
+[inst 80/100 | run 1/1] 16I5 -> profit=4110 (0ms, valid=true)
+[inst 81/100 | run 1/1] 17I1 -> profit=4110 (0ms, valid=true)
+[inst 82/100 | run 1/1] 17I2 -> profit=4120 (0ms, valid=true)
+[inst 83/100 | run 1/1] 17I3 -> profit=4110 (0ms, valid=true)
+[inst 84/100 | run 1/1] 17I4 -> profit=4110 (0ms, valid=true)
+[inst 85/100 | run 1/1] 17I5 -> profit=4110 (0ms, valid=true)
+[inst 86/100 | run 1/1] 18I1 -> profit=4110 (0ms, valid=true)
+[inst 87/100 | run 1/1] 18I2 -> profit=4109 (0ms, valid=true)
+[inst 88/100 | run 1/1] 18I3 -> profit=4110 (0ms, valid=true)
+[inst 89/100 | run 1/1] 18I4 -> profit=4120 (0ms, valid=true)
+[inst 90/100 | run 1/1] 18I5 -> profit=4110 (0ms, valid=true)
+[inst 91/100 | run 1/1] 19I1 -> profit=4110 (0ms, valid=true)
+[inst 92/100 | run 1/1] 19I2 -> profit=4110 (0ms, valid=true)
+[inst 93/100 | run 1/1] 19I3 -> profit=4110 (0ms, valid=true)
+[inst 94/100 | run 1/1] 19I4 -> profit=4110 (0ms, valid=true)
+[inst 95/100 | run 1/1] 19I5 -> profit=4110 (0ms, valid=true)
+[inst 96/100 | run 1/1] 20I1 -> profit=4109 (0ms, valid=true)
+[inst 97/100 | run 1/1] 20I2 -> profit=4109 (0ms, valid=true)
+[inst 98/100 | run 1/1] 20I3 -> profit=4120 (0ms, valid=true)
+[inst 99/100 | run 1/1] 20I4 -> profit=4110 (0ms, valid=true)
+[inst 100/100 | run 1/1] 20I5 -> profit=4110 (0ms, valid=true)
+
+=== Group 1 (1I1-10I5) ===
+  best_profit : 2220
+  mean_profit : 1934.10
+  median      : 2104.50
+  stddev      : 391.62
+  mean_time_ms: 0.00
+=== Group 2 (11I1-20I5) ===
+  best_profit : 4120
+  mean_profit : 4111.60
+  median      : 4110.00
+  stddev      : 4.01
+  mean_time_ms: 0.16
+=== Overall ===
+  best_profit : 4120
+  mean_profit : 3022.85
+  median      : 3164.00
+  stddev      : 1128.39
+  mean_time_ms: 0.08
+  invalid     : 0
+
+CSV written to: /mnt/c/Users/thall/Documents/dckp-sbpo/results/results_Greedy_MaxProfit_20260420_164340.csv

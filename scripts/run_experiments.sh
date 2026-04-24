@@ -6,6 +6,7 @@ ALGO="VNS"
 TIME_LIMIT_MS=10000
 RUNS=5
 OUTPUT=""
+GLOBAL_START_MS="$(date +%s%3N)"
 
 usage() {
     cat <<EOF
@@ -33,6 +34,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+format_duration_ms() {
+    local duration_ms="$1"
+    local total_seconds=$((duration_ms / 1000))
+    local minutes=$((total_seconds / 60))
+    local seconds=$((total_seconds % 60))
+    local millis=$((duration_ms % 1000))
+
+    printf "%dm %02ds.%03d" "${minutes}" "${seconds}" "${millis}"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="build"
@@ -55,7 +66,7 @@ if [[ -z "${OUTPUT}" ]]; then
 fi
 mkdir -p "$(dirname "${OUTPUT}")"
 
-echo "instance,run,seed,profit,weight,capacity,time_ms,valid,algorithm" > "${OUTPUT}"
+echo "instance,run,seed,profit,weight,capacity,start_time,end_time,time_ms,valid,algorithm" > "${OUTPUT}"
 
 if [[ ! -d "${INSTANCE_ROOT}" ]]; then
     echo "Instance root not found: ${INSTANCE_ROOT}" >&2
@@ -82,6 +93,7 @@ classify_group() {
     fi
 }
 
+algorithm_start_ms="$(date +%s%3N)"
 idx=0
 for instance_path in "${INSTANCES[@]}"; do
     idx=$((idx + 1))
@@ -105,9 +117,10 @@ for instance_path in "${INSTANCES[@]}"; do
             exit 1
         fi
 
-        IFS=, read -r out_instance out_seed profit weight capacity time_ms valid algorithm <<<"${output}"
+        IFS=, read -r out_instance out_seed profit weight capacity start_time end_time time_ms valid algorithm <<<"${output}"
         if [[ -z "${out_instance}" || -z "${out_seed}" || -z "${profit}" || -z "${weight}" \
-           || -z "${capacity}" || -z "${time_ms}" || -z "${valid}" || -z "${algorithm}" ]]; then
+           || -z "${capacity}" || -z "${start_time}" || -z "${end_time}" \
+           || -z "${time_ms}" || -z "${valid}" || -z "${algorithm}" ]]; then
             echo "Malformed CSV output for ${stem} (run=${run}, seed=${seed})." >&2
             echo "Raw output: ${output}" >&2
             exit 1
@@ -118,7 +131,7 @@ for instance_path in "${INSTANCES[@]}"; do
             exit 1
         fi
 
-        echo "${out_instance},${run},${out_seed},${profit},${weight},${capacity},${time_ms},${valid},${algorithm}" \
+        echo "${out_instance},${run},${out_seed},${profit},${weight},${capacity},${start_time},${end_time},${time_ms},${valid},${algorithm}" \
             >> "${OUTPUT}"
 
         printf "[inst %d/%d | run %d/%d] %s -> profit=%s (%sms, valid=%s)\n" \
@@ -126,6 +139,11 @@ for instance_path in "${INSTANCES[@]}"; do
             "${out_instance}" "${profit}" "${time_ms}" "${valid}"
     done
 done
+
+algorithm_end_ms="$(date +%s%3N)"
+algorithm_elapsed_ms=$((algorithm_end_ms - algorithm_start_ms))
+echo ""
+echo "Algorithm ${ALGO} elapsed time: $(format_duration_ms "${algorithm_elapsed_ms}")"
 
 STATS="$(awk -F',' '
     function median(arr, n,    mid) {
@@ -155,7 +173,7 @@ STATS="$(awk -F',' '
     }
     NR == 1 { next }  # skip header
     {
-        inst = $1; profit = $4 + 0; time_ms = $7 + 0; valid = $8
+        inst = $1; profit = $4 + 0; time_ms = $9 + 0; valid = $10
         g = group_of(inst)
 
         # Overall
@@ -265,3 +283,7 @@ fi
 
 echo ""
 echo "CSV written to: ${ABS_OUTPUT}"
+
+GLOBAL_END_MS="$(date +%s%3N)"
+GLOBAL_ELAPSED_MS=$((GLOBAL_END_MS - GLOBAL_START_MS))
+echo "Total experiment battery time: $(format_duration_ms "${GLOBAL_ELAPSED_MS}")"

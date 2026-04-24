@@ -1,0 +1,120 @@
+instance,run,seed,profit,weight,capacity,time_ms,valid,algorithm
+10I1,1,32162,2210,2000,2000,0,true,Greedy_MaxProfit
+10I2,1,6270,2210,2000,2000,0,true,Greedy_MaxProfit
+10I3,1,23143,2210,2000,2000,0,true,Greedy_MaxProfit
+10I4,1,23382,2210,2000,2000,0,true,Greedy_MaxProfit
+10I5,1,19099,2210,2000,2000,0,true,Greedy_MaxProfit
+1I1,1,10784,2000,1800,1800,0,true,Greedy_MaxProfit
+1I2,1,30616,1988,1798,1800,0,true,Greedy_MaxProfit
+1I3,1,15890,2000,1800,1800,0,true,Greedy_MaxProfit
+1I4,1,27463,1990,1800,1800,0,true,Greedy_MaxProfit
+1I5,1,26304,1990,1800,1800,0,true,Greedy_MaxProfit
+2I1,1,15781,1753,1563,1800,0,true,Greedy_MaxProfit
+2I2,1,17074,1803,1603,1800,0,true,Greedy_MaxProfit
+2I3,1,10136,1851,1630,1800,0,true,Greedy_MaxProfit
+2I4,1,15617,1985,1755,1800,0,true,Greedy_MaxProfit
+2I5,1,32174,1979,1769,1800,0,true,Greedy_MaxProfit
+3I1,1,29055,1315,1175,1800,0,true,Greedy_MaxProfit
+3I2,1,2016,1407,1257,1800,0,true,Greedy_MaxProfit
+3I3,1,6940,1390,1250,1800,0,true,Greedy_MaxProfit
+3I4,1,23486,1396,1246,1800,0,true,Greedy_MaxProfit
+3I5,1,14526,1365,1215,1800,0,true,Greedy_MaxProfit
+4I1,1,16157,981,871,1800,0,true,Greedy_MaxProfit
+4I2,1,26763,1118,1008,1800,0,true,Greedy_MaxProfit
+4I3,1,28504,1109,999,1800,0,true,Greedy_MaxProfit
+4I4,1,27948,1209,1089,1800,0,true,Greedy_MaxProfit
+4I5,1,5319,859,759,1800,0,true,Greedy_MaxProfit
+5I1,1,7534,1990,1800,1800,0,true,Greedy_MaxProfit
+5I2,1,127,1990,1800,1800,0,true,Greedy_MaxProfit
+5I3,1,13018,1990,1800,1800,0,true,Greedy_MaxProfit
+5I4,1,32507,1990,1800,1800,0,true,Greedy_MaxProfit
+5I5,1,11957,1990,1800,1800,0,true,Greedy_MaxProfit
+6I1,1,23720,2210,2000,2000,0,true,Greedy_MaxProfit
+6I2,1,10883,2210,2000,2000,0,true,Greedy_MaxProfit
+6I3,1,32633,2210,2000,2000,0,true,Greedy_MaxProfit
+6I4,1,11320,2210,2000,2000,0,true,Greedy_MaxProfit
+6I5,1,2057,2210,2000,2000,0,true,Greedy_MaxProfit
+7I1,1,28529,2220,2000,2000,0,true,Greedy_MaxProfit
+7I2,1,24335,2210,2000,2000,0,true,Greedy_MaxProfit
+7I3,1,13788,2210,2000,2000,0,true,Greedy_MaxProfit
+7I4,1,25326,2210,2000,2000,0,true,Greedy_MaxProfit
+7I5,1,28173,2220,2000,2000,0,true,Greedy_MaxProfit
+8I1,1,14719,2210,2000,2000,0,true,Greedy_MaxProfit
+8I2,1,11624,2209,1999,2000,0,true,Greedy_MaxProfit
+8I3,1,374,2210,2000,2000,0,true,Greedy_MaxProfit
+8I4,1,19089,2210,2000,2000,0,true,Greedy_MaxProfit
+8I5,1,13218,2209,1999,2000,0,true,Greedy_MaxProfit
+9I1,1,6654,2210,2000,2000,0,true,Greedy_MaxProfit
+9I2,1,10257,2210,2000,2000,0,true,Greedy_MaxProfit
+9I3,1,7588,2210,2000,2000,0,true,Greedy_MaxProfit
+9I4,1,9898,2209,1999,2000,0,true,Greedy_MaxProfit
+9I5,1,7191,2210,2000,2000,0,true,Greedy_MaxProfit
+11I1,1,744,4110,4000,4000,0,true,Greedy_MaxProfit
+11I2,1,18872,4110,4000,4000,0,true,Greedy_MaxProfit
+11I3,1,2906,4110,4000,4000,1,true,Greedy_MaxProfit
+11I4,1,22089,4110,4000,4000,0,true,Greedy_MaxProfit
+11I5,1,26557,4110,4000,4000,0,true,Greedy_MaxProfit
+12I1,1,16056,4120,4000,4000,1,true,Greedy_MaxProfit
+12I2,1,20965,4110,4000,4000,1,true,Greedy_MaxProfit
+12I3,1,18510,4120,4000,4000,1,true,Greedy_MaxProfit
+12I4,1,7863,4120,4000,4000,0,true,Greedy_MaxProfit
+12I5,1,8905,4110,4000,4000,0,true,Greedy_MaxProfit
+13I1,1,25817,4109,3999,4000,1,true,Greedy_MaxProfit
+13I2,1,5333,4110,4000,4000,1,true,Greedy_MaxProfit
+13I3,1,24132,4120,4000,4000,1,true,Greedy_MaxProfit
+13I4,1,5450,4110,4000,4000,1,true,Greedy_MaxProfit
+13I5,1,20408,4109,3999,4000,0,true,Greedy_MaxProfit
+14I1,1,2741,4110,4000,4000,0,true,Greedy_MaxProfit
+14I2,1,31874,4108,3998,4000,0,true,Greedy_MaxProfit
+14I3,1,14825,4120,4000,4000,0,true,Greedy_MaxProfit
+14I4,1,7201,4110,4000,4000,0,true,Greedy_MaxProfit
+14I5,1,30440,4110,4000,4000,0,true,Greedy_MaxProfit
+15I1,1,4165,4108,3998,4000,0,true,Greedy_MaxProfit
+15I2,1,31142,4109,3999,4000,0,true,Greedy_MaxProfit
+15I3,1,22912,4110,4000,4000,0,true,Greedy_MaxProfit
+15I4,1,13534,4120,4000,4000,0,true,Greedy_MaxProfit
+15I5,1,17512,4110,4000,4000,0,true,Greedy_MaxProfit
+16I1,1,15747,4110,4000,4000,0,true,Greedy_MaxProfit
+16I2,1,21831,4110,4000,4000,0,true,Greedy_MaxProfit
+16I3,1,12976,4110,4000,4000,0,true,Greedy_MaxProfit
+16I4,1,29521,4110,4000,4000,0,true,Greedy_MaxProfit
+16I5,1,7765,4110,4000,4000,0,true,Greedy_MaxProfit
+17I1,1,5813,4110,4000,4000,0,true,Greedy_MaxProfit
+17I2,1,338,4120,4000,4000,0,true,Greedy_MaxProfit
+17I3,1,9576,4110,4000,4000,0,true,Greedy_MaxProfit
+17I4,1,31876,4110,4000,4000,0,true,Greedy_MaxProfit
+17I5,1,6416,4110,4000,4000,0,true,Greedy_MaxProfit
+18I1,1,27456,4110,4000,4000,0,true,Greedy_MaxProfit
+18I2,1,27886,4109,3999,4000,0,true,Greedy_MaxProfit
+18I3,1,32403,4110,4000,4000,0,true,Greedy_MaxProfit
+18I4,1,18091,4120,4000,4000,0,true,Greedy_MaxProfit
+18I5,1,17425,4110,4000,4000,0,true,Greedy_MaxProfit
+19I1,1,25737,4110,4000,4000,0,true,Greedy_MaxProfit
+19I2,1,7746,4110,4000,4000,0,true,Greedy_MaxProfit
+19I3,1,838,4110,4000,4000,0,true,Greedy_MaxProfit
+19I4,1,28106,4110,4000,4000,0,true,Greedy_MaxProfit
+19I5,1,28755,4110,4000,4000,0,true,Greedy_MaxProfit
+20I1,1,24687,4109,3999,4000,0,true,Greedy_MaxProfit
+20I2,1,1417,4109,3999,4000,0,true,Greedy_MaxProfit
+20I3,1,30735,4120,4000,4000,0,true,Greedy_MaxProfit
+20I4,1,25621,4110,4000,4000,0,true,Greedy_MaxProfit
+20I5,1,7263,4110,4000,4000,0,true,Greedy_MaxProfit
+# --- Group 1 (1I1-10I5, 50 instances) ---
+# group1_best_profit=2220
+# group1_mean_profit=1934.10
+# group1_median_profit=2104.50
+# group1_stddev_profit=391.62
+# group1_mean_time_ms=0.00
+# --- Group 2 (11I1-20I5, 50 instances) ---
+# group2_best_profit=4120
+# group2_mean_profit=4111.60
+# group2_median_profit=4110.00
+# group2_stddev_profit=4.01
+# group2_mean_time_ms=0.16
+# --- Overall ---
+# overall_best_profit=4120
+# overall_mean_profit=3022.85
+# overall_median_profit=3164.00
+# overall_stddev_profit=1128.39
+# overall_mean_time_ms=0.08
+# invalid_count=0

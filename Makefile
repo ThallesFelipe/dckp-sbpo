@@ -11,7 +11,7 @@ CMAKE_FLAGS ?=
 all: build
 
 help:
-	@echo "Supported workflow (WSL Ubuntu 24.04 only):"
+	@echo "Supported workflow (WSL Ubuntu 24.04):"
 	@echo "  make build                Configure and build into build/."
 	@echo "  make test                 Build once in build/ and run CTest."
 	@echo "  make run INSTANCE=path    Build once in build/ and run the CLI."

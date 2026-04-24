@@ -1,12 +1,14 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <ctime>
 #include <cstdint>
 #include <cstdlib>
-#include <cmath>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -179,6 +181,24 @@ namespace
     {
         return path.stem().string();
     }
+
+    [[nodiscard]] std::string formatTimestamp(
+        const std::chrono::system_clock::time_point time_point)
+    {
+        const auto milliseconds =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                time_point.time_since_epoch()) %
+            1000;
+
+        const std::time_t time = std::chrono::system_clock::to_time_t(time_point);
+        std::tm local_time{};
+        localtime_r(&time, &local_time);
+
+        std::ostringstream out;
+        out << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S")
+            << '.' << std::setw(3) << std::setfill('0') << milliseconds.count();
+        return out.str();
+    }
 }
 
 int main(int argc, char *argv[])
@@ -216,7 +236,11 @@ int main(int argc, char *argv[])
         std::chrono::milliseconds{std::max<std::int64_t>(0, opts.time_limit_ms)};
 
     dckp::Runner runner(instance);
+    const auto steady_start = std::chrono::steady_clock::now();
+    const auto system_start = std::chrono::system_clock::now();
     Solution solution = runner.execute(*algorithm, config);
+    const auto system_end = std::chrono::system_clock::now();
+    const auto steady_end = std::chrono::steady_clock::now();
 
     Validator validator(instance);
     const bool valid = validator.validate(solution);
@@ -228,7 +252,11 @@ int main(int argc, char *argv[])
     }
 
     const auto time_ms =
-        static_cast<long long>(std::llround(solution.computationTime() * 1000.0));
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            steady_end - steady_start)
+            .count();
+    const std::string start_time = formatTimestamp(system_start);
+    const std::string end_time = formatTimestamp(system_end);
 
     if (opts.csv)
     {
@@ -237,6 +265,8 @@ int main(int argc, char *argv[])
                   << ',' << solution.totalProfit()
                   << ',' << solution.totalWeight()
                   << ',' << instance.capacity()
+                  << ',' << start_time
+                  << ',' << end_time
                   << ',' << time_ms
                   << ',' << (valid ? "true" : "false")
                   << ',' << solution.methodName()
@@ -249,6 +279,8 @@ int main(int argc, char *argv[])
               << " profit=" << solution.totalProfit()
               << " weight=" << solution.totalWeight()
               << " capacity=" << instance.capacity()
+              << " start_time=\"" << start_time << '"'
+              << " end_time=\"" << end_time << '"'
               << " time_ms=" << time_ms
               << " valid=" << (valid ? "true" : "false")
               << '\n';
