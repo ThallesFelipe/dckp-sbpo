@@ -75,7 +75,7 @@ namespace
     {
         std::filesystem::path instance_path{};
         std::string algo{"VNS"};
-        std::int64_t time_limit_ms{10000};
+        std::int64_t time_limit_ms{600000};
         std::uint64_t seed{42};
         bool csv{false};
         bool verbose{false};
@@ -168,7 +168,7 @@ namespace
             << "Usage: dckp_sbpo <instance_path> [--algo NAME] [--time-limit MS] "
                "[--seed N] [--csv] [--verbose]\n"
                "  --algo: Greedy_MaxProfit | VND | ILS | VNS (default: VNS)\n"
-               "  --time-limit: milliseconds (default: 10000)\n"
+               "  --time-limit: milliseconds (default: 600000)\n"
                "  --seed: uint64 (default: 42)\n"
                "  --csv: emit a single CSV row without a header\n";
     }

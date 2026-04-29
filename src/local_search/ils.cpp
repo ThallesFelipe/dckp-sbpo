@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <vector>
+#include <iostream>
 
 namespace dckp
 {
@@ -196,8 +197,11 @@ namespace dckp
 
             if (local_opt.totalProfit() > best.totalProfit())
             {
+                const auto old_profit = best.totalProfit();
                 best = local_opt;
                 ctx.stopping.registerImprovement();
+                std::cerr << "ILS: improved profit " << old_profit
+                          << " -> " << best.totalProfit() << '\n';
             }
         }
 

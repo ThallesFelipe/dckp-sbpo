@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-ALGO="VNS"
-TIME_LIMIT_MS=10000
+ALGO="ILS"
+TIME_LIMIT_MS=600000
 RUNS=5
 OUTPUT=""
 GLOBAL_START_MS="$(date +%s%3N)"
@@ -13,8 +13,8 @@ usage() {
 Usage: $(basename "$0") [--algo NAME] [--time-limit MS] [--runs N] [--output CSV]
 
 Defaults:
-  --algo       VNS
-  --time-limit 10000   (milliseconds per run)
+  --algo       ILS
+  --time-limit 600000  (milliseconds per run)
   --runs       5       (runs per instance with distinct seeds)
   --output     results/results_<algo>_<timestamp>.csv
 
