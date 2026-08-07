@@ -6,7 +6,7 @@ INSTANCE    ?=
 
 CMAKE_FLAGS ?=
 
-.PHONY: all help configure build test run clean
+.PHONY: all help configure build test audit run clean
 
 all: build
 
@@ -14,6 +14,7 @@ help:
 	@echo "Supported workflow (WSL Ubuntu 24.04):"
 	@echo "  make build                Configure and build into build/."
 	@echo "  make test                 Build once in build/ and run CTest."
+	@echo "  make audit                Run the complete reproducible audit."
 	@echo "  make run INSTANCE=path    Build once in build/ and run the CLI."
 	@echo "  make clean                Remove build/."
 
@@ -34,6 +35,9 @@ build: configure
 
 test: build
 	ctest --test-dir $(BUILD_DIR) --output-on-failure
+
+audit:
+	bash scripts/audit.sh
 
 run: build
 	@if [ -n "$(INSTANCE)" ]; then \

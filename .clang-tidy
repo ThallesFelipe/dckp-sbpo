@@ -1,0 +1,4 @@
+Checks: '-*,clang-analyzer-*,bugprone-*,performance-*,portability-*'
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(src|tests)/.*'
+SystemHeaders: false

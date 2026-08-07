@@ -6,7 +6,7 @@
 
 namespace
 {
-    DCKPInstance makeInstance()
+    bool loadInstance(DCKPInstance &instance)
     {
         const std::string content =
             "5 2 100\n"
@@ -14,18 +14,14 @@ namespace
             "1 2 3 4 5\n"
             "1 2  3 4\n";
         dckp_test::ScopedTempFile tmp("cmp", content);
-        DCKPInstance inst;
-        if (!inst.read_from_file(tmp.path()))
-        {
-            throw std::runtime_error("parse failed");
-        }
-        return inst;
+        return instance.read_from_file(tmp.path());
     }
 }
 
 int main()
 {
-    DCKPInstance inst = makeInstance();
+    DCKPInstance inst;
+    DCKP_CHECK(loadInstance(inst));
 
     Solution a(inst);
     a.addItem(0);

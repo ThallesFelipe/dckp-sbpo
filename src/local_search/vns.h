@@ -70,8 +70,6 @@ namespace dckp
         [[nodiscard]] Solution run(const DCKPInstance &instance, RunContext &ctx) override;
         [[nodiscard]] std::string name() const override;
 
-        [[nodiscard]] const VNSConfig &config() const noexcept { return config_; }
-
     private:
         VNSConfig config_{};
     };

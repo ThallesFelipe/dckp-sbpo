@@ -1,0 +1,16 @@
+{
+  "languages": {
+    "C++": {
+      "format_on_save": "off",
+      "language_servers": ["clangd"]
+    }
+  },
+  "lsp": {
+    "clangd": {
+      "binary": {
+        "path": "/usr/bin/clangd-18",
+        "arguments": ["--background-index", "--clang-tidy"]
+      }
+    }
+  }
+}

@@ -1,8 +1,6 @@
 #include "solution.h"
 
-#include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <sstream>
 #include <utility>
 
@@ -11,7 +9,7 @@ Solution::Solution(const DCKPInstance &instance) noexcept
 {
 }
 
-bool Solution::addItem(ItemId item) noexcept
+bool Solution::addItem(ItemId item)
 {
     if (!instance_->is_valid_item(item))
     {
@@ -56,33 +54,6 @@ bool Solution::empty() const noexcept
     return selected_items_.empty();
 }
 
-void Solution::clear() noexcept
-{
-    selected_items_.clear();
-    total_profit_ = 0;
-    total_weight_ = 0;
-}
-
-void Solution::recomputeTotals() noexcept
-{
-    TotalProfit profit_sum = 0;
-    TotalWeight weight_sum = 0;
-    const auto &profits = instance_->profits();
-    const auto &weights = instance_->weights();
-
-    for (const ItemId item : selected_items_)
-    {
-        if (instance_->is_valid_item(item))
-        {
-            const std::size_t idx = static_cast<std::size_t>(item);
-            profit_sum += static_cast<TotalProfit>(profits[idx]);
-            weight_sum += static_cast<TotalWeight>(weights[idx]);
-        }
-    }
-    total_profit_ = profit_sum;
-    total_weight_ = weight_sum;
-}
-
 const std::set<Solution::ItemId> &Solution::selectedItems() const noexcept
 {
     return selected_items_;
@@ -101,11 +72,6 @@ Solution::TotalWeight Solution::totalWeight() const noexcept
 bool Solution::isFeasible() const noexcept
 {
     return is_feasible_;
-}
-
-Solution::Seconds Solution::computationTime() const noexcept
-{
-    return computation_time_;
 }
 
 std::string_view Solution::methodName() const noexcept
@@ -145,27 +111,6 @@ std::string Solution::toString() const
     return ss.str();
 }
 
-void Solution::print() const
-{
-    std::cout << toString() << '\n';
-}
-
-bool Solution::saveToFile(const std::filesystem::path &path) const
-{
-    std::ofstream file(path);
-    if (!file.is_open())
-    {
-        return false;
-    }
-    file << total_profit_ << ' ' << total_weight_ << ' ' << selected_items_.size() << '\n';
-    for (const ItemId item : selected_items_)
-    {
-        file << (item + 1) << ' ';
-    }
-    file << '\n';
-    return static_cast<bool>(file);
-}
-
 bool operator==(const Solution &a, const Solution &b) noexcept
 {
     return a.selected_items_ == b.selected_items_;
@@ -173,11 +118,11 @@ bool operator==(const Solution &a, const Solution &b) noexcept
 
 std::strong_ordering operator<=>(const Solution &a, const Solution &b) noexcept
 {
-    if (auto cmp = a.total_profit_ <=> b.total_profit_; cmp != 0)
+    if (auto cmp = a.total_profit_ <=> b.total_profit_; cmp != std::strong_ordering::equal)
     {
         return cmp;
     }
-    if (auto cmp = b.total_weight_ <=> a.total_weight_; cmp != 0)
+    if (auto cmp = b.total_weight_ <=> a.total_weight_; cmp != std::strong_ordering::equal)
     {
         return cmp;
     }

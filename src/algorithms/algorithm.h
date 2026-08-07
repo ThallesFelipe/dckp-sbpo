@@ -5,6 +5,7 @@
 #include "rng.h"
 #include "stopping_criteria.h"
 
+#include <iosfwd>
 #include <string>
 
 namespace dckp
@@ -20,6 +21,7 @@ namespace dckp
     {
         Rng &rng;
         StoppingCriteria &stopping;
+        std::ostream *log{nullptr};
     };
 
     /**

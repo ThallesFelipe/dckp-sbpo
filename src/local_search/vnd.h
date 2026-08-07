@@ -73,9 +73,7 @@ namespace dckp
          * resulting local optimum. The seed must be bound to a feasible
          * selection for its own instance; the search preserves feasibility.
          */
-        [[nodiscard]] Solution improve(const Solution &seed, RunContext &ctx);
-
-        [[nodiscard]] const VNDConfig &config() const noexcept { return config_; }
+        [[nodiscard]] Solution improve(const Solution &seed, RunContext &ctx) const;
 
     private:
         VNDConfig config_{};

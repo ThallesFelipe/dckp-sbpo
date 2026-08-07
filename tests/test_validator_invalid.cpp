@@ -9,7 +9,7 @@
 
 namespace
 {
-    DCKPInstance makeInstance()
+    bool loadInstance(DCKPInstance &instance)
     {
         const std::string content =
             "5 2 10\n"
@@ -17,12 +17,7 @@ namespace
             "2 3 1 4 1\n"
             "1 2  3 4\n";
         dckp_test::ScopedTempFile tmp("validator_inv", content);
-        DCKPInstance inst;
-        if (!inst.read_from_file(tmp.path()))
-        {
-            throw std::runtime_error(std::string{"parse failed: "} + std::string{inst.last_error()});
-        }
-        return inst;
+        return instance.read_from_file(tmp.path());
     }
 
     bool containsSubstr(const std::vector<std::string> &messages, std::string_view needle)
@@ -35,7 +30,8 @@ namespace
 
 int main()
 {
-    DCKPInstance inst = makeInstance();
+    DCKPInstance inst;
+    DCKP_CHECK(loadInstance(inst));
     Validator validator(inst);
 
     {
@@ -75,6 +71,17 @@ int main()
         DCKP_CHECK(!report.feasible);
         DCKP_CHECK_EQ(report.conflict_pair_count, 1U);
         DCKP_CHECK(containsSubstr(report.failures, "Conflict"));
+    }
+
+    {
+        const std::vector<DCKPInstance::ItemId> items{0, 0, 2};
+        const ValidationReport report = validator.analyze(
+            std::span<const DCKPInstance::ItemId>{items.data(), items.size()});
+        DCKP_CHECK(!report.feasible);
+        DCKP_CHECK_EQ(report.duplicate_item_count, 1U);
+        DCKP_CHECK_EQ(report.total_profit, 8);
+        DCKP_CHECK_EQ(report.total_weight, 3);
+        DCKP_CHECK(containsSubstr(report.failures, "more than once"));
     }
 
     {

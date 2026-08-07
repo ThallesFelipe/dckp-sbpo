@@ -1,7 +1,9 @@
 #include "vnd.h"
+#include "selection_state.h"
 
 #include "../constructive/greedy_max_profit.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -14,69 +16,7 @@ namespace dckp
         using Weight64 = Solution::TotalWeight;
         using Profit64 = Solution::TotalProfit;
 
-        /**
-         * @brief Mutable bookkeeping shared by every neighborhood.
-         *
-         * @c in_solution mirrors Solution::selectedItems() as a byte flag
-         * for O(1) membership. @c conflict_count[u] is the number of
-         * currently-selected items that conflict with @c u — an unselected
-         * item is admissible only when its count is zero. Both are kept
-         * in sync with Solution through @c applyAdd / @c applyRemove.
-         */
-        struct State
-        {
-            const DCKPInstance &instance;
-            Solution &solution;
-            std::vector<std::int32_t> conflict_count;
-            std::vector<char> in_solution;
-
-            State(const DCKPInstance &inst, Solution &sol)
-                : instance(inst),
-                  solution(sol),
-                  conflict_count(static_cast<std::size_t>(inst.n_items()), std::int32_t{0}),
-                  in_solution(static_cast<std::size_t>(inst.n_items()), char{0})
-            {
-                const auto &graph = instance.conflict_graph();
-                for (const ItemId item : solution.selectedItems())
-                {
-                    in_solution[static_cast<std::size_t>(item)] = 1;
-                }
-                for (const ItemId item : solution.selectedItems())
-                {
-                    for (const ItemId nbr : graph[static_cast<std::size_t>(item)])
-                    {
-                        ++conflict_count[static_cast<std::size_t>(nbr)];
-                    }
-                }
-            }
-
-            void applyAdd(ItemId item)
-            {
-                const auto idx = static_cast<std::size_t>(item);
-                solution.addItem(item);
-                in_solution[idx] = 1;
-                for (const ItemId nbr : instance.conflict_graph()[idx])
-                {
-                    ++conflict_count[static_cast<std::size_t>(nbr)];
-                }
-            }
-
-            void applyRemove(ItemId item)
-            {
-                const auto idx = static_cast<std::size_t>(item);
-                solution.removeItem(item);
-                in_solution[idx] = 0;
-                for (const ItemId nbr : instance.conflict_graph()[idx])
-                {
-                    --conflict_count[static_cast<std::size_t>(nbr)];
-                }
-            }
-
-            [[nodiscard]] bool isSelected(ItemId item) const noexcept
-            {
-                return in_solution[static_cast<std::size_t>(item)] != 0;
-            }
-        };
+        using State = SelectionState;
 
         /**
          * @brief N1 — Add. Scans unselected items and accepts the first
@@ -84,7 +24,7 @@ namespace dckp
          * with the current selection. Strictly increases profit iff the
          * item has positive profit.
          */
-        bool tryAdd(State &s, StoppingCriteria &stopping)
+        bool tryAdd(State &s, const StoppingCriteria &stopping)
         {
             const auto &weights = s.instance.weights();
             const auto &profits = s.instance.profits();
@@ -128,7 +68,7 @@ namespace dckp
          * makes @c u conflict-free (@c conflict_count[u] - [i↔u] == 0)
          * and that capacity is respected.
          */
-        bool trySwap11(State &s, StoppingCriteria &stopping)
+        bool trySwap11(State &s, const StoppingCriteria &stopping)
         {
             const auto &weights = s.instance.weights();
             const auto &profits = s.instance.profits();
@@ -184,7 +124,7 @@ namespace dckp
          * checks that removing both makes @c u conflict-free and that
          * capacity is respected.
          */
-        bool trySwap21(State &s, StoppingCriteria &stopping)
+        bool trySwap21(State &s, const StoppingCriteria &stopping)
         {
             const auto &weights = s.instance.weights();
             const auto &profits = s.instance.profits();
@@ -258,7 +198,7 @@ namespace dckp
          * pairs (u, v) that are pairwise compatible and whose combined
          * profit strictly exceeds p_i.
          */
-        bool trySwap12(State &s, StoppingCriteria &stopping)
+        bool trySwap12(State &s, const StoppingCriteria &stopping)
         {
             const auto &weights = s.instance.weights();
             const auto &profits = s.instance.profits();
@@ -342,7 +282,7 @@ namespace dckp
             return false;
         }
 
-        using Neighborhood = bool (*)(State &, StoppingCriteria &);
+        using Neighborhood = bool (*)(State &, const StoppingCriteria &);
     }
 
     VND::VND() = default;
@@ -374,7 +314,7 @@ namespace dckp
         return improve(seed, ctx);
     }
 
-    Solution VND::improve(const Solution &seed, RunContext &ctx)
+    Solution VND::improve(const Solution &seed, RunContext &ctx) const
     {
         Solution best = seed;
         best.setMethodName(name());
@@ -418,9 +358,8 @@ namespace dckp
             }
             ctx.stopping.tick();
 
-            const Profit64 profit_before = best.totalProfit();
             const bool moved = schedule[k](state, ctx.stopping);
-            if (moved && best.totalProfit() > profit_before)
+            if (moved)
             {
                 ctx.stopping.registerImprovement();
                 k = 0;

@@ -27,7 +27,7 @@ namespace dckp
             stopping.setMaxIterationsWithoutImprovement(config.no_improvement_limit);
         }
 
-        RunContext ctx{rng, stopping};
+        RunContext ctx{rng, stopping, config.log};
         stopping.start();
 
         const auto wall_start = std::chrono::steady_clock::now();

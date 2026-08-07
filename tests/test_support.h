@@ -40,7 +40,7 @@ namespace dckp_test
      * @brief Creates a unique temporary file path in the OS temp dir.
      * The file is not created, only named.
      */
-    inline std::filesystem::path makeTempPath(std::string_view stem, std::string_view ext = ".txt")
+    inline std::filesystem::path makeTempPath(std::string_view stem, const char *ext = ".txt")
     {
         std::random_device rd;
         std::mt19937_64 eng(rd());
@@ -57,7 +57,7 @@ namespace dckp_test
     class ScopedTempFile
     {
     public:
-        ScopedTempFile(std::string_view stem, std::string_view content)
+        ScopedTempFile(const char *stem, std::string_view content)
             : path_(makeTempPath(stem))
         {
             std::ofstream out(path_, std::ios::binary);

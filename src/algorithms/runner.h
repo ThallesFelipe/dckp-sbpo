@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iosfwd>
 
 namespace dckp
 {
@@ -24,6 +25,7 @@ namespace dckp
         StoppingCriteria::Duration time_limit{0};
         std::size_t iteration_limit{0};
         std::size_t no_improvement_limit{0};
+        std::ostream *log{nullptr};
     };
 
     /**

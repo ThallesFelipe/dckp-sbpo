@@ -3,36 +3,72 @@
 set -euo pipefail
 
 ALGO="ILS"
-TIME_LIMIT_MS=600000
+TIME_LIMIT_MS=1000000
 RUNS=5
 OUTPUT=""
-GLOBAL_START_MS="$(date +%s%3N)"
+BASE_SEED=42
+VERBOSE=false
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [--algo NAME] [--time-limit MS] [--runs N] [--output CSV]
+Usage: $(basename "$0") [--algo NAME] [--time-limit MS] [--runs N] [--base-seed N] [--output CSV] [--verbose]
 
 Defaults:
   --algo       ILS
-  --time-limit 600000  (milliseconds per run)
+  --time-limit 1000000 (milliseconds per run)
   --runs       5       (runs per instance with distinct seeds)
+  --base-seed  42      (first deterministic seed)
   --output     results/results_<algo>_<timestamp>.csv
+  --verbose    print per-iteration ILS logs
 
 Iterates over every instance under
 DCKP-instances/DCKP-instances-set-I-100/{I1-I10,I11-I20}/ and writes a CSV.
 EOF
 }
 
+require_value() {
+    if [[ $# -lt 2 ]]; then
+        echo "Missing value for $1" >&2
+        usage >&2
+        exit 2
+    fi
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --algo)         ALGO="$2"; shift 2 ;;
-        --time-limit)   TIME_LIMIT_MS="$2"; shift 2 ;;
-        --runs)         RUNS="$2"; shift 2 ;;
-        --output)       OUTPUT="$2"; shift 2 ;;
+        --algo)         require_value "$@"; ALGO="$2"; shift 2 ;;
+        --time-limit)   require_value "$@"; TIME_LIMIT_MS="$2"; shift 2 ;;
+        --runs)         require_value "$@"; RUNS="$2"; shift 2 ;;
+        --base-seed)    require_value "$@"; BASE_SEED="$2"; shift 2 ;;
+        --output)       require_value "$@"; OUTPUT="$2"; shift 2 ;;
+        --verbose)      VERBOSE=true; shift ;;
         -h|--help)      usage; exit 0 ;;
         *)              echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
 done
+
+case "${ALGO}" in
+    Greedy_MaxProfit|Greedy|VND|ILS|VNS) ;;
+    *) echo "Invalid algorithm: ${ALGO}" >&2; exit 2 ;;
+esac
+
+if [[ ! "${TIME_LIMIT_MS}" =~ ^[1-9][0-9]*$ || ${#TIME_LIMIT_MS} -gt 18 ]]; then
+    echo "--time-limit must be an integer between 1 and 999999999999999999." >&2
+    exit 2
+fi
+if [[ ! "${RUNS}" =~ ^[1-9][0-9]*$ || ${#RUNS} -gt 9 ]]; then
+    echo "--runs must be an integer between 1 and 999999999." >&2
+    exit 2
+fi
+if [[ ! "${BASE_SEED}" =~ ^[0-9]+$ || ${#BASE_SEED} -gt 18 ]]; then
+    echo "--base-seed must be an integer between 0 and 999999999999999999." >&2
+    exit 2
+fi
+
+RUNS=$((10#${RUNS}))
+BASE_SEED=$((10#${BASE_SEED}))
+
+GLOBAL_START_MS="$(date +%s%3N)"
 
 format_duration_ms() {
     local duration_ms="$1"
@@ -82,17 +118,6 @@ if [[ "${TOTAL_INSTANCES}" -eq 0 ]]; then
     exit 1
 fi
 
-classify_group() {
-    local base="$1"
-    if [[ "${base}" =~ ^([1-9]|10)I[1-5]$ ]]; then
-        echo "1"
-    elif [[ "${base}" =~ ^(1[1-9]|20)I[1-5]$ ]]; then
-        echo "2"
-    else
-        echo "?"
-    fi
-}
-
 algorithm_start_ms="$(date +%s%3N)"
 idx=0
 for instance_path in "${INSTANCES[@]}"; do
@@ -100,20 +125,24 @@ for instance_path in "${INSTANCES[@]}"; do
     base="$(basename "${instance_path}")"
     stem="${base%.txt}"
 
-    for run in $(seq 1 "${RUNS}"); do
-        seed="${RANDOM}"
+    for ((run = 1; run <= RUNS; ++run)); do
+        seed=$((BASE_SEED + (idx - 1) * RUNS + run - 1))
 
-        set +e
-        output="$("${BINARY}" "${instance_path}" \
-            --algo "${ALGO}" \
-            --time-limit "${TIME_LIMIT_MS}" \
-            --seed "${seed}" \
-            --csv 2>/dev/null)"
-        rc=$?
-        set -e
+        run_args=("${BINARY}" "${instance_path}"
+            --algo "${ALGO}"
+            --time-limit "${TIME_LIMIT_MS}"
+            --seed "${seed}"
+            --csv)
+        if [[ "${VERBOSE}" == true ]]; then
+            run_args+=(--verbose)
+        fi
 
-        if [[ "${rc}" -ne 0 || -z "${output}" ]]; then
+        if ! output="$("${run_args[@]}")"; then
             echo "Experiment failed for ${stem} (run=${run}, seed=${seed})." >&2
+            exit 1
+        fi
+        if [[ -z "${output}" || "${output}" == *$'\n'* ]]; then
+            echo "Malformed multiline output for ${stem} (run=${run}, seed=${seed})." >&2
             exit 1
         fi
 
@@ -128,6 +157,10 @@ for instance_path in "${INSTANCES[@]}"; do
         if [[ "${out_instance}" != "${stem}" || "${out_seed}" != "${seed}" ]]; then
             echo "Mismatched CSV output for ${stem} (run=${run}, seed=${seed})." >&2
             echo "Raw output: ${output}" >&2
+            exit 1
+        fi
+        if [[ "${valid}" != "true" ]]; then
+            echo "Invalid solution for ${stem} (run=${run}, seed=${seed})." >&2
             exit 1
         fi
 
@@ -214,7 +247,7 @@ STATS="$(awk -F',' '
     }
 ' "${OUTPUT}")"
 
-get_val() { echo "${STATS}" | tr ' ' '\n' | grep "^$1=" | cut -d= -f2; }
+get_val() { printf '%s\n' "${STATS}" | tr ' ' '\n' | grep "^$1=" | cut -d= -f2; }
 
 g1_best="$(get_val g1_best)";   g1_mean="$(get_val g1_mean)"
 g1_median="$(get_val g1_median)"; g1_stddev="$(get_val g1_stddev)"

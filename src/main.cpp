@@ -1,9 +1,8 @@
-#include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <chrono>
 #include <ctime>
 #include <cstdint>
-#include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -11,8 +10,10 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include "utils/instance_reader.h"
+#include "utils/solution.h"
 #include "utils/validator.h"
 #include "algorithms/algorithm.h"
 #include "algorithms/runner.h"
@@ -75,15 +76,29 @@ namespace
     {
         std::filesystem::path instance_path{};
         std::string algo{"VNS"};
-        std::int64_t time_limit_ms{600000};
+        std::int64_t time_limit_ms{1000000};
         std::uint64_t seed{42};
         bool csv{false};
         bool verbose{false};
+        bool help{false};
     };
 
     [[nodiscard]] bool needsValue(std::string_view flag) noexcept
     {
         return flag == "--algo" || flag == "--time-limit" || flag == "--seed";
+    }
+
+    template <typename Integer>
+    [[nodiscard]] bool parseInteger(const std::string_view text, Integer &value) noexcept
+    {
+        if (text.empty())
+        {
+            return false;
+        }
+        const char *const begin = text.data();
+        const char *const end = begin + text.size();
+        const auto [position, error] = std::from_chars(begin, end, value);
+        return error == std::errc{} && position == end;
     }
 
     /**
@@ -96,17 +111,20 @@ namespace
         for (int i = 1; i < argc; ++i)
         {
             std::string_view arg{argv[i]};
+            if (arg == "--help" || arg == "-h")
+            {
+                opts.help = true;
+                return true;
+            }
             if (arg == "--verbose" || arg == "-v")
             {
                 opts.verbose = true;
-                continue;
             }
-            if (arg == "--csv")
+            else if (arg == "--csv")
             {
                 opts.csv = true;
-                continue;
             }
-            if (needsValue(arg))
+            else if (needsValue(arg))
             {
                 if (i + 1 >= argc)
                 {
@@ -120,41 +138,36 @@ namespace
                 }
                 else if (arg == "--time-limit")
                 {
-                    try
+                    if (!parseInteger(value, opts.time_limit_ms) || opts.time_limit_ms <= 0)
                     {
-                        opts.time_limit_ms = std::stoll(std::string{value});
-                    }
-                    catch (...)
-                    {
-                        std::cerr << "Invalid --time-limit: " << value << '\n';
+                        std::cerr << "Invalid --time-limit (expected a positive integer): "
+                                  << value << '\n';
                         return false;
                     }
                 }
                 else if (arg == "--seed")
                 {
-                    try
+                    if (!parseInteger(value, opts.seed))
                     {
-                        opts.seed = std::stoull(std::string{value});
-                    }
-                    catch (...)
-                    {
-                        std::cerr << "Invalid --seed: " << value << '\n';
+                        std::cerr << "Invalid --seed (expected uint64): " << value << '\n';
                         return false;
                     }
                 }
-                continue;
             }
-            if (!arg.empty() && arg[0] == '-')
+            else if (!arg.empty() && arg[0] == '-')
             {
                 std::cerr << "Unknown option: " << arg << '\n';
                 return false;
             }
-            if (!opts.instance_path.empty())
+            else
             {
-                std::cerr << "Unexpected extra argument: " << arg << '\n';
-                return false;
+                if (!opts.instance_path.empty())
+                {
+                    std::cerr << "Unexpected extra argument: " << arg << '\n';
+                    return false;
+                }
+                opts.instance_path = std::filesystem::path{arg};
             }
-            opts.instance_path = std::filesystem::path{arg};
         }
         return !opts.instance_path.empty();
     }
@@ -162,15 +175,16 @@ namespace
     /**
      * @brief Prints a one-line usage hint to stderr.
      */
-    void printUsage()
+    void printUsage(std::ostream &out)
     {
-        std::cerr
+        out
             << "Usage: dckp_sbpo <instance_path> [--algo NAME] [--time-limit MS] "
                "[--seed N] [--csv] [--verbose]\n"
                "  --algo: Greedy_MaxProfit | VND | ILS | VNS (default: VNS)\n"
-               "  --time-limit: milliseconds (default: 600000)\n"
+               "  --time-limit: milliseconds (default: 1000000)\n"
                "  --seed: uint64 (default: 42)\n"
-               "  --csv: emit a single CSV row without a header\n";
+               "  --csv: emit a single CSV row without a header\n"
+               "  --verbose: emit diagnostics and iteration logs to stderr\n";
     }
 
     /**
@@ -206,7 +220,21 @@ int main(int argc, char *argv[])
     CliOptions opts;
     if (!parseCli(argc, argv, opts))
     {
-        printUsage();
+        printUsage(std::cerr);
+        return 2;
+    }
+
+    if (opts.help)
+    {
+        printUsage(std::cout);
+        return 0;
+    }
+
+    auto algorithm = makeAlgorithm(opts.algo);
+    if (!algorithm)
+    {
+        std::cerr << "Unknown --algo: " << opts.algo << '\n';
+        printUsage(std::cerr);
         return 2;
     }
 
@@ -217,23 +245,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    auto algorithm = makeAlgorithm(opts.algo);
-    if (!algorithm)
-    {
-        std::cerr << "Unknown --algo: " << opts.algo << '\n';
-        printUsage();
-        return 2;
-    }
-
     if (opts.verbose)
     {
-        instance.print();
+        instance.print(std::cerr);
     }
 
     dckp::RunnerConfig config;
     config.seed = opts.seed;
     config.time_limit =
-        std::chrono::milliseconds{std::max<std::int64_t>(0, opts.time_limit_ms)};
+        std::chrono::milliseconds{opts.time_limit_ms};
+    config.log = opts.verbose ? &std::cerr : nullptr;
 
     dckp::Runner runner(instance);
     const auto steady_start = std::chrono::steady_clock::now();
@@ -248,7 +269,7 @@ int main(int argc, char *argv[])
     if (opts.verbose)
     {
         std::cerr << validator.validateDetailed(solution) << '\n';
-        solution.print();
+        std::cerr << solution.toString() << '\n';
     }
 
     const auto time_ms =
@@ -271,7 +292,7 @@ int main(int argc, char *argv[])
                   << ',' << (valid ? "true" : "false")
                   << ',' << solution.methodName()
                   << '\n';
-        return 0;
+        return valid ? 0 : 1;
     }
 
     std::cout << "instance=" << instanceBaseName(opts.instance_path)
@@ -285,5 +306,5 @@ int main(int argc, char *argv[])
               << " valid=" << (valid ? "true" : "false")
               << '\n';
 
-    return 0;
+    return valid ? 0 : 1;
 }

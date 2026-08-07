@@ -1,7 +1,7 @@
 #include "greedy_max_profit.h"
+#include "profit_order.h"
 
-#include <algorithm>
-#include <numeric>
+#include <cstddef>
 #include <vector>
 
 namespace dckp
@@ -22,25 +22,10 @@ namespace dckp
             return sol;
         }
 
-        const auto &profits = instance.profits();
         const auto &weights = instance.weights();
         const auto &conflict_graph = instance.conflict_graph();
 
-        std::vector<DCKPInstance::ItemId> order(static_cast<std::size_t>(n));
-        std::iota(order.begin(), order.end(), DCKPInstance::ItemId{0});
-
-        std::sort(order.begin(), order.end(),
-                  [&profits, &weights](DCKPInstance::ItemId a, DCKPInstance::ItemId b)
-                  {
-                      if (profits[static_cast<std::size_t>(a)] !=
-                          profits[static_cast<std::size_t>(b)])
-                      {
-                          return profits[static_cast<std::size_t>(a)] >
-                                 profits[static_cast<std::size_t>(b)];
-                      }
-                      return weights[static_cast<std::size_t>(a)] <
-                             weights[static_cast<std::size_t>(b)];
-                  });
+        const std::vector<DCKPInstance::ItemId> order = makeProfitOrder(instance);
 
         std::vector<bool> forbidden(static_cast<std::size_t>(n), false);
 

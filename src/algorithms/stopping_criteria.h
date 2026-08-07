@@ -85,7 +85,6 @@ namespace dckp
         }
 
         [[nodiscard]] std::size_t iterations() const noexcept { return iterations_; }
-        [[nodiscard]] bool started() const noexcept { return started_; }
 
     private:
         Clock::time_point start_time_{};

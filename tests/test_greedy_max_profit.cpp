@@ -59,6 +59,18 @@ static constexpr std::string_view kCliqueForbidden =
     "  1 2\n"
     ";\n";
 
+static constexpr std::string_view kNonPositiveProfit =
+    "param n := 4;\n"
+    "param c := 20;\n"
+    "param : V : p w :=\n"
+    "  0  10  5\n"
+    "  1   0  1\n"
+    "  2  -5  1\n"
+    "  3   8  4\n"
+    ";\n"
+    "set E :=\n"
+    ";\n";
+
 static int test_basic_greedy()
 {
     dckp_test::ScopedTempFile tmp("greedy_basic", kSmallInstance);
@@ -154,6 +166,30 @@ static int test_zero_capacity()
     return 0;
 }
 
+static int test_non_positive_profit_is_skipped()
+{
+    dckp_test::ScopedTempFile tmp("greedy_non_positive", kNonPositiveProfit);
+    DCKPInstance instance;
+    DCKP_CHECK(instance.read_from_file(tmp.path()));
+
+    dckp::RunnerConfig config;
+    dckp::Runner runner(instance);
+    dckp::GreedyMaxProfit greedy;
+    Solution sol = runner.execute(greedy, config);
+
+    Validator validator(instance);
+    DCKP_CHECK(validator.validate(sol));
+    DCKP_CHECK_EQ(sol.size(), std::size_t{2});
+    DCKP_CHECK(sol.hasItem(0));
+    DCKP_CHECK(sol.hasItem(3));
+    DCKP_CHECK(!sol.hasItem(1));
+    DCKP_CHECK(!sol.hasItem(2));
+    DCKP_CHECK_EQ(sol.totalProfit(), std::int64_t{18});
+
+    std::cout << "test_non_positive_profit_is_skipped PASSED\n";
+    return 0;
+}
+
 int main()
 {
     int failures = 0;
@@ -161,6 +197,7 @@ int main()
     failures += test_tie_break();
     failures += test_clique_forbidden();
     failures += test_zero_capacity();
+    failures += test_non_positive_profit_is_skipped();
 
     if (failures != 0)
     {

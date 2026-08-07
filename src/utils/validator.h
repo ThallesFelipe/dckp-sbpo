@@ -3,6 +3,7 @@
 #include "instance_reader.h"
 #include "solution.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <set>
 #include <span>
@@ -24,6 +25,7 @@ struct ValidationReport
     std::int64_t total_weight{0};
     std::int64_t capacity{0};
     std::size_t invalid_index_count{0};
+    std::size_t duplicate_item_count{0};
     std::size_t conflict_pair_count{0};
     bool capacity_violated{false};
     std::vector<std::string> failures{};
@@ -65,12 +67,6 @@ public:
      * failure reason).
      */
     [[nodiscard]] std::string validateDetailed(const Solution &solution) const;
-
-    /**
-     * @brief Incremental feasibility helpers for construction algorithms.
-     */
-    [[nodiscard]] bool checkCapacity(std::int64_t current_weight, std::int64_t item_weight) const noexcept;
-    [[nodiscard]] bool checkConflicts(ItemId item, const std::set<ItemId> &selected_items) const noexcept;
 
 private:
     const DCKPInstance &instance_;

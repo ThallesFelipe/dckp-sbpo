@@ -12,6 +12,8 @@
 #include "local_search/vnd.h"
 
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <string_view>
 static constexpr std::string_view kSmallInstance =
     "param n := 3;\n"
@@ -168,6 +170,35 @@ static int test_ils_respects_iteration_limit()
     return 0;
 }
 
+static int test_ils_iteration_log()
+{
+    dckp_test::ScopedTempFile tmp("ils_log", kSmallInstance);
+    DCKPInstance instance;
+    DCKP_CHECK(instance.read_from_file(tmp.path()));
+
+    std::ostringstream log;
+    dckp::RunnerConfig config;
+    config.seed = 13;
+    config.iteration_limit = 100;
+    config.log = &log;
+
+    dckp::Runner runner(instance);
+    dckp::ILS ils;
+    Solution sol = runner.execute(ils, config);
+
+    Validator validator(instance);
+    DCKP_CHECK(validator.validate(sol));
+    const std::string output = log.str();
+    DCKP_CHECK(output.find("ILS start initial_profit=") != std::string::npos);
+    DCKP_CHECK(output.find("ILS iteration=") != std::string::npos);
+    DCKP_CHECK(output.find(" gain=") != std::string::npos);
+    DCKP_CHECK(output.find(" gain_percent=") != std::string::npos);
+    DCKP_CHECK(output.find("ILS end iterations=") != std::string::npos);
+
+    std::cout << "test_ils_iteration_log PASSED\n";
+    return 0;
+}
+
 int main()
 {
     int failures = 0;
@@ -176,6 +207,7 @@ int main()
     failures += test_ils_zero_capacity();
     failures += test_ils_plateau_acceptance_preserves_best();
     failures += test_ils_respects_iteration_limit();
+    failures += test_ils_iteration_log();
 
     if (failures != 0)
     {

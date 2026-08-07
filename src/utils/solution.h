@@ -3,8 +3,8 @@
 #include "instance_reader.h"
 
 #include <compare>
+#include <cstddef>
 #include <cstdint>
-#include <filesystem>
 #include <set>
 #include <string>
 #include <string_view>
@@ -46,7 +46,7 @@ public:
      * @return true if the solution changed, false otherwise (invalid item
      * id, or item already present).
      */
-    bool addItem(ItemId item) noexcept;
+    bool addItem(ItemId item);
 
     /**
      * @brief Removes @p item if present. Totals are updated.
@@ -58,24 +58,10 @@ public:
     [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] bool empty() const noexcept;
 
-    /**
-     * @brief Clears selected items and resets derived totals. Does not
-     * alter feasibility, timing, or method name metadata.
-     */
-    void clear() noexcept;
-
-    /**
-     * @brief Recomputes total_profit and total_weight from the current
-     * items and the bound instance. Called automatically by addItem and
-     * removeItem, and exposed for defensive use after bulk operations.
-     */
-    void recomputeTotals() noexcept;
-
     [[nodiscard]] const std::set<ItemId> &selectedItems() const noexcept;
     [[nodiscard]] TotalProfit totalProfit() const noexcept;
     [[nodiscard]] TotalWeight totalWeight() const noexcept;
     [[nodiscard]] bool isFeasible() const noexcept;
-    [[nodiscard]] Seconds computationTime() const noexcept;
     [[nodiscard]] std::string_view methodName() const noexcept;
     [[nodiscard]] const DCKPInstance &instance() const noexcept;
 
@@ -84,14 +70,12 @@ public:
     void setMethodName(std::string name);
 
     [[nodiscard]] std::string toString() const;
-    void print() const;
-    [[nodiscard]] bool saveToFile(const std::filesystem::path &path) const;
 
     friend bool operator==(const Solution &a, const Solution &b) noexcept;
     friend std::strong_ordering operator<=>(const Solution &a, const Solution &b) noexcept;
 
 private:
-    const DCKPInstance *instance_;
+    const DCKPInstance *instance_{nullptr};
     std::set<ItemId> selected_items_{};
     TotalProfit total_profit_{0};
     TotalWeight total_weight_{0};

@@ -1,21 +1,21 @@
 #include "instance_reader.h"
 
 #include <algorithm>
-#include <cctype>
 #include <charconv>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <system_error>
 
 namespace
 {
-    enum class InputFormat
+    enum class InputFormat : std::uint8_t
     {
         NumericCompact,
         AmplLike,
@@ -27,6 +27,12 @@ namespace
     using Conflict = DCKPInstance::Conflict;
 
     constexpr std::string_view kWhitespace = " \t\r\n";
+
+    constexpr bool is_ascii_space(char value) noexcept
+    {
+        return value == ' ' || value == '\t' || value == '\n' ||
+               value == '\r' || value == '\f' || value == '\v';
+    }
 
     std::string_view trim(std::string_view text) noexcept
     {
@@ -101,7 +107,7 @@ namespace
         return true;
     }
 
-    bool parse_param_line(std::string_view line, std::string_view name, std::int64_t &out_value)
+    bool parse_param_line(std::string_view line, const char *name, std::int64_t &out_value)
     {
         const std::string normalized = normalize_whitespace(line);
         const std::string prefix = std::string{"param "} + std::string{name};
@@ -207,16 +213,10 @@ void DCKPInstance::clear_data() noexcept
 {
     n_items_ = 0;
     capacity_ = 0;
+    n_conflicts_ = 0;
     profits_.clear();
     weights_.clear();
-    conflicts_.clear();
     conflict_graph_.clear();
-}
-
-void DCKPInstance::clear() noexcept
-{
-    clear_data();
-    last_error_.clear();
 }
 
 bool DCKPInstance::read_from_file(const std::filesystem::path &file_path)
@@ -269,20 +269,42 @@ bool DCKPInstance::read_from_file(const std::filesystem::path &file_path)
 
 bool DCKPInstance::parse_numeric_compact(std::string_view content)
 {
-    std::istringstream in(std::string{content});
     std::vector<std::int64_t> tokens;
-    tokens.reserve(4096);
+    tokens.reserve(content.size() / 4U);
 
-    std::int64_t parsed_value = 0;
-    while (in >> parsed_value)
+    const char *cursor = content.data();
+    const char *const end = content.data() + content.size();
+    while (cursor != end)
     {
+        while (cursor != end && is_ascii_space(*cursor))
+        {
+            ++cursor;
+        }
+        if (cursor == end)
+        {
+            break;
+        }
+
+        if (*cursor == '+')
+        {
+            ++cursor;
+            if (cursor == end || *cursor < '0' || *cursor > '9')
+            {
+                set_error("Invalid numeric compact format: non-numeric token found.");
+                return false;
+            }
+        }
+
+        std::int64_t parsed_value = 0;
+        const auto [next, error] = std::from_chars(cursor, end, parsed_value);
+        if (error != std::errc{} || next == cursor ||
+            (next != end && !is_ascii_space(*next)))
+        {
+            set_error("Invalid numeric compact format: non-numeric token found.");
+            return false;
+        }
         tokens.push_back(parsed_value);
-    }
-
-    if (!in.eof())
-    {
-        set_error("Invalid numeric compact format: non-numeric token found.");
-        return false;
+        cursor = next;
     }
 
     if (tokens.size() < 3U)
@@ -331,20 +353,15 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
     std::int64_t declared_conflicts = 0;
     std::int64_t parsed_capacity = 0;
 
-    if (second_is_conflicts && !third_is_conflicts)
+    if (second_is_conflicts)
     {
         declared_conflicts = second_header_value;
         parsed_capacity = third_header_value;
     }
-    else if (!second_is_conflicts && third_is_conflicts)
+    else if (third_is_conflicts)
     {
         declared_conflicts = third_header_value;
         parsed_capacity = second_header_value;
-    }
-    else if (second_is_conflicts && third_is_conflicts)
-    {
-        declared_conflicts = second_header_value;
-        parsed_capacity = third_header_value;
     }
     else
     {
@@ -408,13 +425,12 @@ bool DCKPInstance::parse_numeric_compact(std::string_view content)
     {
         return false;
     }
-    build_conflict_graph();
     return true;
 }
 
 bool DCKPInstance::parse_ampl_like(std::string_view content)
 {
-    enum class State
+    enum class State : std::uint8_t
     {
         Header,
         Values,
@@ -725,7 +741,6 @@ bool DCKPInstance::parse_ampl_like(std::string_view content)
     {
         return false;
     }
-    build_conflict_graph();
     return true;
 }
 
@@ -778,13 +793,12 @@ bool DCKPInstance::normalize_conflicts(const std::vector<Conflict> &raw_conflict
         }
     }
 
-    conflicts_.clear();
-    conflicts_.reserve(raw_conflicts.size());
+    std::vector<Count> degrees(static_cast<std::size_t>(n_items_), Count{0});
 
     for (const Conflict &edge : raw_conflicts)
     {
-        ItemId u = static_cast<ItemId>(edge.first - base);
-        ItemId v = static_cast<ItemId>(edge.second - base);
+        ItemId u = edge.first - base;
+        ItemId v = edge.second - base;
 
         if (!is_valid_item(u) || !is_valid_item(v))
         {
@@ -795,35 +809,40 @@ bool DCKPInstance::normalize_conflicts(const std::vector<Conflict> &raw_conflict
         {
             continue;
         }
-        if (u > v)
-        {
-            std::swap(u, v);
-        }
-        conflicts_.emplace_back(u, v);
+        ++degrees[static_cast<std::size_t>(u)];
+        ++degrees[static_cast<std::size_t>(v)];
     }
 
-    std::sort(conflicts_.begin(), conflicts_.end());
-    conflicts_.erase(std::unique(conflicts_.begin(), conflicts_.end()), conflicts_.end());
-    return true;
-}
-
-void DCKPInstance::build_conflict_graph()
-{
     conflict_graph_.assign(static_cast<std::size_t>(n_items_), {});
-
-    for (const Conflict &edge : conflicts_)
+    for (std::size_t item = 0; item < conflict_graph_.size(); ++item)
     {
-        const std::size_t u = static_cast<std::size_t>(edge.first);
-        const std::size_t v = static_cast<std::size_t>(edge.second);
-        conflict_graph_[u].push_back(edge.second);
-        conflict_graph_[v].push_back(edge.first);
+        conflict_graph_[item].reserve(degrees[item]);
     }
 
+    for (const Conflict &edge : raw_conflicts)
+    {
+        const ItemId u = edge.first - base;
+        const ItemId v = edge.second - base;
+        if (u == v)
+        {
+            continue;
+        }
+        conflict_graph_[static_cast<std::size_t>(u)].push_back(v);
+        conflict_graph_[static_cast<std::size_t>(v)].push_back(u);
+    }
+
+    n_conflicts_ = 0;
     for (std::vector<ItemId> &adjacency : conflict_graph_)
     {
-        std::sort(adjacency.begin(), adjacency.end());
+        if (!std::is_sorted(adjacency.begin(), adjacency.end()))
+        {
+            std::sort(adjacency.begin(), adjacency.end());
+        }
         adjacency.erase(std::unique(adjacency.begin(), adjacency.end()), adjacency.end());
+        n_conflicts_ += adjacency.size();
     }
+    n_conflicts_ /= 2U;
+    return true;
 }
 
 bool DCKPInstance::has_conflict(ItemId item1, ItemId item2) const noexcept
@@ -843,15 +862,6 @@ bool DCKPInstance::has_conflict(ItemId item1, ItemId item2) const noexcept
     return std::binary_search(adj_2.begin(), adj_2.end(), item1);
 }
 
-DCKPInstance::Count DCKPInstance::conflict_degree(ItemId item) const noexcept
-{
-    if (!is_valid_item(item))
-    {
-        return 0U;
-    }
-    return conflict_graph_[static_cast<std::size_t>(item)].size();
-}
-
 double DCKPInstance::conflict_density() const noexcept
 {
     if (n_items_ <= 1)
@@ -864,7 +874,7 @@ double DCKPInstance::conflict_density() const noexcept
     {
         return 0.0;
     }
-    return 100.0 * static_cast<double>(conflicts_.size()) / total_possible_edges;
+    return 100.0 * static_cast<double>(n_conflicts_) / total_possible_edges;
 }
 
 void DCKPInstance::print(std::ostream &out) const
@@ -872,7 +882,7 @@ void DCKPInstance::print(std::ostream &out) const
     out << "DCKP instance summary\n";
     out << "Items: " << n_items_ << '\n';
     out << "Capacity: " << capacity_ << '\n';
-    out << "Conflicts: " << conflicts_.size() << '\n';
+    out << "Conflicts: " << n_conflicts_ << '\n';
     out << "Conflict density: " << std::fixed << std::setprecision(2)
         << conflict_density() << "%\n";
 
@@ -895,11 +905,6 @@ void DCKPInstance::print(std::ostream &out) const
         << "], avg=" << avg_weight << '\n';
 }
 
-void DCKPInstance::print() const
-{
-    print(std::cout);
-}
-
 std::string_view DCKPInstance::last_error() const noexcept
 {
     return last_error_;
@@ -917,7 +922,7 @@ DCKPInstance::Capacity DCKPInstance::capacity() const noexcept
 
 DCKPInstance::Count DCKPInstance::n_conflicts() const noexcept
 {
-    return conflicts_.size();
+    return n_conflicts_;
 }
 
 const std::vector<DCKPInstance::Value> &DCKPInstance::profits() const noexcept
@@ -930,17 +935,7 @@ const std::vector<DCKPInstance::Value> &DCKPInstance::weights() const noexcept
     return weights_;
 }
 
-const std::vector<DCKPInstance::Conflict> &DCKPInstance::conflicts() const noexcept
-{
-    return conflicts_;
-}
-
 const std::vector<std::vector<DCKPInstance::ItemId>> &DCKPInstance::conflict_graph() const noexcept
 {
     return conflict_graph_;
-}
-
-bool DCKPInstance::empty() const noexcept
-{
-    return n_items_ == 0;
 }

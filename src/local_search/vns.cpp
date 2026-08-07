@@ -1,8 +1,10 @@
 #include "vns.h"
+#include "selection_state.h"
 
 #include "../constructive/greedy_max_profit.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 #include <iostream>
@@ -14,71 +16,7 @@ namespace dckp
         using ItemId = DCKPInstance::ItemId;
         using Weight64 = Solution::TotalWeight;
 
-        /**
-         * @brief Lightweight mirror of the Solution's selection used only
-         * during a single shake call.
-         *
-         * @c in_solution provides O(1) membership queries, @c conflict_count
-         * provides O(1) per-candidate conflict admissibility tests. Both
-         * are maintained incrementally through @c applyAdd / @c applyRemove
-         * at O(degree) per mutation — deliberately kept local to vns.cpp,
-         * matching the pattern used by VND's State and ILS's PerturbState
-         * without exposing either.
-         */
-        struct ShakeState
-        {
-            const DCKPInstance &instance;
-            Solution &solution;
-            std::vector<std::int32_t> conflict_count;
-            std::vector<char> in_solution;
-
-            ShakeState(const DCKPInstance &inst, Solution &sol)
-                : instance(inst),
-                  solution(sol),
-                  conflict_count(static_cast<std::size_t>(inst.n_items()), std::int32_t{0}),
-                  in_solution(static_cast<std::size_t>(inst.n_items()), char{0})
-            {
-                const auto &graph = instance.conflict_graph();
-                for (const ItemId item : solution.selectedItems())
-                {
-                    in_solution[static_cast<std::size_t>(item)] = 1;
-                }
-                for (const ItemId item : solution.selectedItems())
-                {
-                    for (const ItemId nbr : graph[static_cast<std::size_t>(item)])
-                    {
-                        ++conflict_count[static_cast<std::size_t>(nbr)];
-                    }
-                }
-            }
-
-            void applyAdd(ItemId item)
-            {
-                const auto idx = static_cast<std::size_t>(item);
-                solution.addItem(item);
-                in_solution[idx] = 1;
-                for (const ItemId nbr : instance.conflict_graph()[idx])
-                {
-                    ++conflict_count[static_cast<std::size_t>(nbr)];
-                }
-            }
-
-            void applyRemove(ItemId item)
-            {
-                const auto idx = static_cast<std::size_t>(item);
-                solution.removeItem(item);
-                in_solution[idx] = 0;
-                for (const ItemId nbr : instance.conflict_graph()[idx])
-                {
-                    --conflict_count[static_cast<std::size_t>(nbr)];
-                }
-            }
-
-            [[nodiscard]] bool isSelected(ItemId item) const noexcept
-            {
-                return in_solution[static_cast<std::size_t>(item)] != 0;
-            }
-        };
+        using ShakeState = SelectionState;
 
         /**
          * @brief Maps an arbitrary shake level @p k to one of the three
@@ -377,9 +315,12 @@ namespace dckp
                 const auto old_profit = best.totalProfit();
                 best = local_opt;
                 ctx.stopping.registerImprovement();
-                std::cerr << "VNS: improved profit " << old_profit
-                          << " -> " << best.totalProfit() << '\n';
-                ;
+                if (ctx.log != nullptr)
+                {
+                    *ctx.log << "VNS improvement=" << best.totalProfit() - old_profit
+                             << " previous_profit=" << old_profit
+                             << " best_profit=" << best.totalProfit() << '\n';
+                }
             }
         }
 

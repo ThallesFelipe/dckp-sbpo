@@ -1,11 +1,16 @@
 #include "ils.h"
+#include "selection_state.h"
 
 #include "../constructive/greedy_max_profit.h"
+#include "../constructive/profit_order.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
+#include <iomanip>
+#include <ostream>
+#include <utility>
 #include <vector>
-#include <iostream>
 
 namespace dckp
 {
@@ -13,67 +18,6 @@ namespace dckp
     {
         using ItemId = DCKPInstance::ItemId;
         using Weight64 = Solution::TotalWeight;
-
-        /**
-         * @brief Lightweight mirror of the Solution's selection used only
-         * during perturbation.
-         *
-         * @c in_solution gives O(1) membership queries and @c conflict_count
-         * gives O(1) per-candidate conflict admissibility tests. Both are
-         * maintained incrementally in @c applyAdd / @c applyRemove at
-         * O(degree) cost per mutation — matching the bookkeeping used by
-         * VND but intentionally kept local and minimal, as ILS only needs
-         * it during a single perturbation call.
-         */
-        struct PerturbState
-        {
-            const DCKPInstance &instance;
-            Solution &solution;
-            std::vector<std::int32_t> conflict_count;
-            std::vector<char> in_solution;
-
-            PerturbState(const DCKPInstance &inst, Solution &sol)
-                : instance(inst),
-                  solution(sol),
-                  conflict_count(static_cast<std::size_t>(inst.n_items()), std::int32_t{0}),
-                  in_solution(static_cast<std::size_t>(inst.n_items()), char{0})
-            {
-                const auto &graph = instance.conflict_graph();
-                for (const ItemId item : solution.selectedItems())
-                {
-                    in_solution[static_cast<std::size_t>(item)] = 1;
-                }
-                for (const ItemId item : solution.selectedItems())
-                {
-                    for (const ItemId nbr : graph[static_cast<std::size_t>(item)])
-                    {
-                        ++conflict_count[static_cast<std::size_t>(nbr)];
-                    }
-                }
-            }
-
-            void applyAdd(ItemId item)
-            {
-                const auto idx = static_cast<std::size_t>(item);
-                solution.addItem(item);
-                in_solution[idx] = 1;
-                for (const ItemId nbr : instance.conflict_graph()[idx])
-                {
-                    ++conflict_count[static_cast<std::size_t>(nbr)];
-                }
-            }
-
-            void applyRemove(ItemId item)
-            {
-                const auto idx = static_cast<std::size_t>(item);
-                solution.removeItem(item);
-                in_solution[idx] = 0;
-                for (const ItemId nbr : instance.conflict_graph()[idx])
-                {
-                    --conflict_count[static_cast<std::size_t>(nbr)];
-                }
-            }
-        };
 
         /**
          * @brief Produces a perturbed copy of @p incumbent.
@@ -94,7 +38,10 @@ namespace dckp
          * leave the current VND basin of attraction without discarding
          * the structural decisions the incumbent already made.
          */
-        [[nodiscard]] Solution perturb(const Solution &incumbent, int strength, Rng &rng)
+        [[nodiscard]] Solution perturb(const Solution &incumbent,
+                                       int strength,
+                                       Rng &rng,
+                                       const std::vector<ItemId> &repair_order)
         {
             Solution sol = incumbent;
 
@@ -104,7 +51,7 @@ namespace dckp
                 return sol;
             }
 
-            PerturbState state(instance, sol);
+            SelectionState state(instance, sol);
 
             std::vector<ItemId> selected(sol.selectedItems().begin(),
                                          sol.selectedItems().end());
@@ -120,35 +67,16 @@ namespace dckp
                 state.applyRemove(selected[i]);
             }
 
-            const auto n = instance.n_items();
-            const auto &profits = instance.profits();
             const auto &weights = instance.weights();
 
-            std::vector<ItemId> order;
-            order.reserve(static_cast<std::size_t>(n));
-            for (ItemId u = 0; u < n; ++u)
-            {
-                if (state.in_solution[static_cast<std::size_t>(u)] == 0)
-                {
-                    order.push_back(u);
-                }
-            }
-            std::sort(order.begin(), order.end(),
-                      [&profits, &weights](ItemId a, ItemId b) noexcept
-                      {
-                          const auto ai = static_cast<std::size_t>(a);
-                          const auto bi = static_cast<std::size_t>(b);
-                          if (profits[ai] != profits[bi])
-                          {
-                              return profits[ai] > profits[bi];
-                          }
-                          return weights[ai] < weights[bi];
-                      });
-
             const auto capacity = instance.capacity();
-            for (const ItemId u : order)
+            for (const ItemId u : repair_order)
             {
                 const auto idx = static_cast<std::size_t>(u);
+                if (state.in_solution[idx] != 0)
+                {
+                    continue;
+                }
                 if (state.conflict_count[idx] != 0)
                 {
                     continue;
@@ -162,6 +90,40 @@ namespace dckp
             }
 
             return sol;
+        }
+
+        void logIteration(std::ostream &out,
+                          const std::size_t iteration,
+                          const Solution::TotalProfit candidate_profit,
+                          const Solution::TotalProfit incumbent_before,
+                          const Solution::TotalProfit incumbent_after,
+                          const Solution::TotalProfit best_before,
+                          const Solution::TotalProfit best_after,
+                          const bool accepted,
+                          const std::size_t work_iterations,
+                          const StoppingCriteria::Duration elapsed)
+        {
+            const auto gain = best_after - best_before;
+            const double gain_percent = best_before == 0
+                                            ? (gain > 0 ? 100.0 : 0.0)
+                                            : 100.0 * static_cast<double>(gain) /
+                                                  static_cast<double>(best_before);
+            const auto flags = out.flags();
+            const auto precision = out.precision();
+            out << "ILS iteration=" << iteration
+                << " candidate_profit=" << candidate_profit
+                << " incumbent_before=" << incumbent_before
+                << " incumbent_after=" << incumbent_after
+                << " accepted=" << (accepted ? "true" : "false")
+                << " improved=" << (gain > 0 ? "true" : "false")
+                << " gain=" << gain
+                << " gain_percent=" << std::fixed << std::setprecision(2) << gain_percent
+                << " best_before=" << best_before
+                << " best_after=" << best_after
+                << " work_iterations=" << work_iterations
+                << " elapsed_ms=" << elapsed.count() << '\n';
+            out.flags(flags);
+            out.precision(precision);
         }
     }
 
@@ -182,27 +144,79 @@ namespace dckp
         VND vnd(config_.vnd_config);
         Solution incumbent = vnd.improve(s0, ctx);
         Solution best = incumbent;
+        const auto repair_order = makeProfitOrder(instance);
+        const auto initial_profit = best.totalProfit();
+        std::size_t iteration = 0;
+        std::size_t improvements = 0;
+
+        if (ctx.log != nullptr)
+        {
+            *ctx.log << "ILS start initial_profit=" << initial_profit
+                     << " selected_items=" << best.size()
+                     << " elapsed_ms=" << ctx.stopping.elapsed().count() << '\n';
+        }
 
         while (!ctx.stopping.shouldStop())
         {
             ctx.stopping.tick();
+            ++iteration;
 
-            Solution perturbed = perturb(incumbent, config_.perturbation_strength, ctx.rng);
+            const auto incumbent_before = incumbent.totalProfit();
+            const auto best_before = best.totalProfit();
+            Solution perturbed = perturb(
+                incumbent, config_.perturbation_strength, ctx.rng, repair_order);
             Solution local_opt = vnd.improve(perturbed, ctx);
+            const auto candidate_profit = local_opt.totalProfit();
+            const bool accepted = candidate_profit >= incumbent_before;
+            const bool improved = candidate_profit > best_before;
 
-            if (local_opt.totalProfit() >= incumbent.totalProfit())
+            if (improved)
             {
-                incumbent = local_opt;
-            }
-
-            if (local_opt.totalProfit() > best.totalProfit())
-            {
-                const auto old_profit = best.totalProfit();
                 best = local_opt;
+                ++improvements;
                 ctx.stopping.registerImprovement();
-                std::cerr << "ILS: improved profit " << old_profit
-                          << " -> " << best.totalProfit() << '\n';
             }
+
+            if (accepted)
+            {
+                incumbent = std::move(local_opt);
+            }
+
+            if (ctx.log != nullptr)
+            {
+                logIteration(*ctx.log,
+                             iteration,
+                             candidate_profit,
+                             incumbent_before,
+                             incumbent.totalProfit(),
+                             best_before,
+                             best.totalProfit(),
+                             accepted,
+                             ctx.stopping.iterations(),
+                             ctx.stopping.elapsed());
+            }
+        }
+
+        if (ctx.log != nullptr)
+        {
+            const auto total_gain = best.totalProfit() - initial_profit;
+            const double total_gain_percent = initial_profit == 0
+                                                  ? (total_gain > 0 ? 100.0 : 0.0)
+                                                  : 100.0 * static_cast<double>(total_gain) /
+                                                        static_cast<double>(initial_profit);
+            const auto flags = ctx.log->flags();
+            const auto precision = ctx.log->precision();
+            *ctx.log << "ILS end iterations=" << iteration
+                     << " improvements=" << improvements
+                     << " initial_profit=" << initial_profit
+                     << " best_profit=" << best.totalProfit()
+                     << " total_gain=" << total_gain
+                     << " total_gain_percent=" << std::fixed << std::setprecision(2)
+                     << total_gain_percent
+                     << " work_iterations=" << ctx.stopping.iterations()
+                     << " elapsed_ms=" << ctx.stopping.elapsed().count() << '\n';
+            ctx.log->flags(flags);
+            ctx.log->precision(precision);
         }
 
         best.setMethodName(name());
