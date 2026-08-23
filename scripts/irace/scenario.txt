@@ -1,0 +1,14 @@
+parameterFile = "parameters.txt"
+configurationsFile = "configurations.txt"
+targetRunner = "target-runner.sh"
+targetRunnerTimeout = 1020
+trainInstancesFile = "train-instances.txt"
+sampleInstances = 0
+blockSize = 20
+firstTest = 1
+eachTest = 1
+testType = "F-test"
+maxExperiments = 1000
+parallel = 1
+seed = 20260810
+logFile = "../../results/irace/irace.Rdata"

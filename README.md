@@ -183,3 +183,87 @@ chmod +x scripts/run_experiments.sh
 ```
 
 O CSV final estará em [results/](results/).
+
+---
+
+## 8. Calibração do ILS + VND com irace
+
+O cenário em [scripts/irace/](scripts/irace/) calibra a força de perturbação
+do ILS e o subconjunto de vizinhanças do VND. Cada chamada usa exatamente
+**1.000 segundos**, a mesma condição de parada do experimento do artigo. O
+irace recebe o lucro com sinal negativo porque ele minimiza custos.
+
+Uma descrição completa, didática e pronta para apresentação está em
+[RELATORIO_IRACE.md](RELATORIO_IRACE.md).
+
+### Instalação e verificação
+
+No WSL:
+
+~~~bash
+sudo apt install -y r-base
+R -q -e 'install.packages("irace", repos="https://cloud.r-project.org")'
+make build
+chmod +x scripts/irace/*.sh tests/scripts/*.sh
+./scripts/irace/run.sh --check-fast
+~~~
+
+O check rápido usa 100 ms exclusivamente para validar o encadeamento entre
+irace, target runner e executável. O wrapper localiza automaticamente o
+executável instalado dentro da biblioteca pessoal do R.
+
+### Protocolo de tuning
+
+- Treino: variantes I1–I4 das 20 famílias, totalizando 80 instâncias.
+- Blocos: quatro blocos balanceados, cada um contendo uma instância de cada
+  família; uma configuração só pode ser eliminada após um bloco completo.
+- Teste independente: variante I5 das 20 famílias.
+- Orçamento: 1.000 avaliações do target runner.
+- Tempo: 1.000 segundos por avaliação.
+- Execução sequencial para evitar interferência entre processos medidos por
+  tempo.
+- Seed do irace: 20260810.
+- Espaço: perturbação inteira de 1 a 8 e 15 subconjuntos não vazios das quatro
+  vizinhanças do VND.
+- A configuração padrão (perturbação 4 e todas as vizinhanças) participa como
+  configuração inicial.
+
+Execute a calibração definitiva com:
+
+~~~bash
+./scripts/irace/run.sh
+~~~
+
+No pior caso, 1.000 avaliações de 1.000 segundos correspondem a cerca de
+11,6 dias de CPU. Cada execução cria em results/irace/ um log RData com nome
+único e um manifesto contendo commit Git, estado do worktree, versões,
+identificadores criptográficos do binário/cenário, sistema e processador.
+
+Extraia a melhor configuração e o comando exato da avaliação final com:
+
+~~~bash
+Rscript scripts/irace/extract_best.R results/irace/tuning_<timestamp>.Rdata
+~~~
+
+### Avaliação final
+
+Depois de obter os cinco valores da configuração vencedora, execute:
+
+~~~bash
+./scripts/irace/evaluate_test.sh PERTURBACAO ADD SWAP_1_1 SWAP_2_1 SWAP_1_2
+~~~
+
+O script compara a configuração padrão e a calibrada nos mesmos pares de
+instância/seed: 20 instâncias de teste × 5 runs × 2 configurações, totalizando
+200 execuções de 1.000 segundos. A ordem entre baseline e configuração
+calibrada é alternada para reduzir viés temporal.
+
+Além do CSV bruto, são gerados automaticamente:
+
+- médias pareadas por instância;
+- ganho absoluto e percentual da configuração calibrada;
+- vitórias, empates e derrotas;
+- teste de Wilcoxon sobre os 20 ganhos percentuais por instância;
+- resumo de lucro e tempo.
+
+Essa bateria pode consumir cerca de 55,6 horas em execução sequencial.

@@ -1,0 +1,9 @@
+# name                          switch                             type  values
+perturbation_strength            "--ils-perturbation-strength "     i     (1, 8)
+vnd_add                          "--vnd-add "                        c     (0, 1)
+vnd_swap_1_1                     "--vnd-swap-1-1 "                   c     (0, 1)
+vnd_swap_2_1                     "--vnd-swap-2-1 "                   c     (0, 1)
+vnd_swap_1_2                     "--vnd-swap-1-2 "                   c     (0, 1)
+
+[forbidden]
+vnd_add == 0 & vnd_swap_1_1 == 0 & vnd_swap_2_1 == 0 & vnd_swap_1_2 == 0

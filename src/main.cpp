@@ -51,7 +51,8 @@ namespace
      * main.cpp so that Runner::execute() does not have to become a
      * registry. Returns @c nullptr on an unknown name.
      */
-    [[nodiscard]] std::unique_ptr<dckp::Algorithm> makeAlgorithm(std::string_view name)
+    [[nodiscard]] std::unique_ptr<dckp::Algorithm> makeAlgorithm(
+        std::string_view name, const dckp::ILSConfig &ils_config)
     {
         if (iequals(name, "Greedy_MaxProfit") || iequals(name, "Greedy"))
         {
@@ -59,15 +60,18 @@ namespace
         }
         if (iequals(name, "VND"))
         {
-            return std::make_unique<dckp::VND>();
+            return std::make_unique<dckp::VND>(ils_config.vnd_config);
         }
         if (iequals(name, "ILS"))
         {
-            return std::make_unique<dckp::ILS>();
+            return std::make_unique<dckp::ILS>(ils_config);
         }
         if (iequals(name, "VNS"))
         {
-            return std::make_unique<dckp::VNS>();
+            return std::make_unique<dckp::VNS>(dckp::VNSConfig{
+                .k_max = 3,
+                .vnd_config = ils_config.vnd_config,
+            });
         }
         return nullptr;
     }
@@ -78,6 +82,7 @@ namespace
         std::string algo{"VNS"};
         std::int64_t time_limit_ms{1000000};
         std::uint64_t seed{42};
+        dckp::ILSConfig ils_config{};
         bool csv{false};
         bool verbose{false};
         bool help{false};
@@ -85,7 +90,10 @@ namespace
 
     [[nodiscard]] bool needsValue(std::string_view flag) noexcept
     {
-        return flag == "--algo" || flag == "--time-limit" || flag == "--seed";
+        return flag == "--algo" || flag == "--time-limit" || flag == "--seed" ||
+               flag == "--ils-perturbation-strength" || flag == "--vnd-add" ||
+               flag == "--vnd-swap-1-1" || flag == "--vnd-swap-2-1" ||
+               flag == "--vnd-swap-1-2";
     }
 
     template <typename Integer>
@@ -99,6 +107,17 @@ namespace
         const char *const end = begin + text.size();
         const auto [position, error] = std::from_chars(begin, end, value);
         return error == std::errc{} && position == end;
+    }
+
+    [[nodiscard]] bool parseBinaryFlag(const std::string_view text, bool &value) noexcept
+    {
+        int parsed{};
+        if (!parseInteger(text, parsed) || (parsed != 0 && parsed != 1))
+        {
+            return false;
+        }
+        value = parsed == 1;
+        return true;
     }
 
     /**
@@ -153,6 +172,44 @@ namespace
                         return false;
                     }
                 }
+                else if (arg == "--ils-perturbation-strength")
+                {
+                    if (!parseInteger(value, opts.ils_config.perturbation_strength) ||
+                        opts.ils_config.perturbation_strength < 1 ||
+                        opts.ils_config.perturbation_strength > 8)
+                    {
+                        std::cerr << "Invalid --ils-perturbation-strength "
+                                     "(expected an integer from 1 to 8): "
+                                  << value << '\n';
+                        return false;
+                    }
+                }
+                else
+                {
+                    bool *target{};
+                    if (arg == "--vnd-add")
+                    {
+                        target = &opts.ils_config.vnd_config.enable_add;
+                    }
+                    else if (arg == "--vnd-swap-1-1")
+                    {
+                        target = &opts.ils_config.vnd_config.enable_swap_1_1;
+                    }
+                    else if (arg == "--vnd-swap-2-1")
+                    {
+                        target = &opts.ils_config.vnd_config.enable_swap_2_1;
+                    }
+                    else
+                    {
+                        target = &opts.ils_config.vnd_config.enable_swap_1_2;
+                    }
+                    if (!parseBinaryFlag(value, *target))
+                    {
+                        std::cerr << "Invalid " << arg << " (expected 0 or 1): " << value
+                                  << '\n';
+                        return false;
+                    }
+                }
             }
             else if (!arg.empty() && arg[0] == '-')
             {
@@ -169,6 +226,13 @@ namespace
                 opts.instance_path = std::filesystem::path{arg};
             }
         }
+        const auto &vnd = opts.ils_config.vnd_config;
+        if (!vnd.enable_add && !vnd.enable_swap_1_1 && !vnd.enable_swap_2_1 &&
+            !vnd.enable_swap_1_2)
+        {
+            std::cerr << "At least one VND neighborhood must be enabled.\n";
+            return false;
+        }
         return !opts.instance_path.empty();
     }
 
@@ -183,6 +247,11 @@ namespace
                "  --algo: Greedy_MaxProfit | VND | ILS | VNS (default: VNS)\n"
                "  --time-limit: milliseconds (default: 1000000)\n"
                "  --seed: uint64 (default: 42)\n"
+               "  --ils-perturbation-strength: integer in [1, 8] (default: 4)\n"
+               "  --vnd-add: 0 | 1 (default: 1)\n"
+               "  --vnd-swap-1-1: 0 | 1 (default: 1)\n"
+               "  --vnd-swap-2-1: 0 | 1 (default: 1)\n"
+               "  --vnd-swap-1-2: 0 | 1 (default: 1)\n"
                "  --csv: emit a single CSV row without a header\n"
                "  --verbose: emit diagnostics and iteration logs to stderr\n";
     }
@@ -230,7 +299,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    auto algorithm = makeAlgorithm(opts.algo);
+    auto algorithm = makeAlgorithm(opts.algo, opts.ils_config);
     if (!algorithm)
     {
         std::cerr << "Unknown --algo: " << opts.algo << '\n';

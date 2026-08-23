@@ -1,6 +1,7 @@
 # Build directories
 /build/
 /out/
+/results/
 /cmake-build-*/
 
 # Local datasets
